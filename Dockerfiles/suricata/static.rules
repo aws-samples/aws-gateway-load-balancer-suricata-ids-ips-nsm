@@ -1,0 +1,1 @@
+# Add your static rules here. Static rules are built together with your container and can therefore be updated and versionized together with your Suricata container, version and configuration. For rules that should'nt be static nor versionized together with Suricata. See dyamic.rules

@@ -1,0 +1,10 @@
+{
+	"Parameters" : {
+		"PcapLogRententionS3": "5",
+		"DefaultLogRententionCloudWatch": "3",
+		"EveLogRententionCloudWatch": "30",
+		"SuricataRulesets": "",
+		"MaxMindApiKey": "",
+		"SuricataInstanceType": "t3.large"
+    }
+}

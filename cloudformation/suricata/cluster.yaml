@@ -1,0 +1,716 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  VpcId:
+    Description: The VPC id
+    Type: String
+  VpcCidr:
+    Description: The VPC id
+    Type: String
+  PrivateSubnet1:
+    Description: The Private Subnet 1 id
+    Type: String
+  PrivateSubnet2:
+    Description: The Private Subnet 2 id
+    Type: String
+  PrivateSubnet3:
+    Description: The Private Subnet 3 id
+    Type: String
+  Ami:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
+
+  PcapLogRententionS3:
+    Description: "How many days Pcap log should be saved in S3"
+    Default: 30
+    Type: Number
+
+  DefaultLogRententionCloudWatch:
+    Description: "How many days Fast log should be saved in Cloudwatch"
+    Default: 3
+    Type: Number
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+  EveLogRententionCloudWatch:
+    Description: "How many days EVE log should be saved in Cloudwatch"
+    Default: 30
+    Type: Number
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+  SuricataImage:
+    Description: Container image
+    Type: String
+    Default: ""
+
+  RulesFetcherImage:
+    Description: Container image
+    Type: String
+    Default: ""
+
+  DynamicRulesS3Path:
+    Description: S3 Path to dynamic.rules
+    Type: String
+    Default: ""
+
+  SuricataRulesets:
+    Description: |
+      Enable rulesets from the following index: https://www.openinfosecfoundation.org/rules/index.yaml in a comma delimted list. 
+      Example: et/open, sslbl/ssl-fp-blacklist, et/pro secret-code=password, etnetera/aggressive
+    Type: String
+    Default: ""
+    
+  MaxMindApiKey:
+    Description: Your MaxMind API key to download the GeoLite Database. https://dev.maxmind.com/geoip/geolite2-free-geolocation-data 
+    Type: String
+    Default: ""
+
+  SuricataInstanceType:
+    Type: String
+    Default: c5n.large
+
+Conditions:
+  HasSuricataRulesets:
+    !Not [!Equals [!Ref SuricataRulesets, ""]]
+
+Resources:
+  SuricataRulesetsParameter:
+    Condition: HasSuricataRulesets
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/suricata/rulesets
+      Type:  String
+      Value: !Ref SuricataRulesets
+
+##
+## Monitoring
+##
+  SuricataEveLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/eve
+      RetentionInDays: !Ref EveLogRententionCloudWatch
+  SuricataFastLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/fast
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataHttpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/http
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataTlsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/tls
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataAlertDebugLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/alert-debug
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataStatsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/stats
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataTcpDataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/tcp-data
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+  SuricataHttpDataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub /${AWS::StackName}/suricata/http-data
+      RetentionInDays: !Ref DefaultLogRententionCloudWatch
+          
+  SuricataPcapBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-pcapbucket
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            ExpirationInDays: !Ref PcapLogRententionS3
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      
+  SuricataLogsEfs:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: True
+    
+  SuricataLogsEfsMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: !Ref SuricataLogsEfs
+      SecurityGroups: 
+        - !Ref SuricataLogsEfsSecurityGroup
+      SubnetId: !Ref PrivateSubnet1
+
+  SuricataLogsEfsMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: !Ref SuricataLogsEfs
+      SecurityGroups: 
+        - !Ref SuricataLogsEfsSecurityGroup
+      SubnetId: !Ref PrivateSubnet2
+
+  SuricataLogsEfsMountTarget3:
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: !Ref SuricataLogsEfs
+      SecurityGroups: 
+        - !Ref SuricataLogsEfsSecurityGroup
+      SubnetId: !Ref PrivateSubnet3
+
+  SuricataLogsEfsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: >-
+        Suricata Security group
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref SuricataSecurityGroup
+          IpProtocol: "TCP"
+          FromPort: 2049
+          ToPort: 2049 
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1
+      Tags:
+        - Key: Name
+          Value: "EFS SG"
+##
+## ECS
+##
+  SuricataEcsCluster:
+    Type: AWS::ECS::Cluster
+
+  SuricataService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - "SuricataAutoScalingGroup"
+      - "SuricataCapacityProviderAssociation" 
+    Properties: 
+      CapacityProviderStrategy: 
+        - CapacityProvider: !Ref SuricataCapacityProvider
+          Base: 2
+          Weight: 1
+      Cluster: !Ref SuricataEcsCluster
+      DeploymentConfiguration: 
+        MaximumPercent: 100
+        MinimumHealthyPercent: 50
+      DeploymentController: 
+        Type: ECS
+      DesiredCount: 2
+      EnableECSManagedTags: true
+      PlacementConstraints: 
+        - Type: distinctInstance 
+      SchedulingStrategy: REPLICA
+      ServiceName: Suricata
+      TaskDefinition: !Ref SuricataTaskDefinition
+
+  SuricataCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+      AutoScalingGroupProvider: 
+        AutoScalingGroupArn: !Ref SuricataAutoScalingGroup
+        ManagedScaling: 
+          TargetCapacity: 100
+          Status: ENABLED
+        ManagedTerminationProtection: DISABLED
+
+  SuricataCapacityProviderAssociation: 
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties: 
+      CapacityProviders: 
+        - !Ref SuricataCapacityProvider
+      Cluster: !Ref SuricataEcsCluster 
+      DefaultCapacityProviderStrategy: 
+        - Base: 3
+          Weight: 1
+          CapacityProvider: !Ref SuricataCapacityProvider
+
+  SuricataTaskDefinition: 
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${AWS::StackName}-SuricataTaskDefinition
+      NetworkMode: host
+      Volumes:
+        - Host: 
+            SourcePath: /var/log/suricata/
+          Name: SuricataLogs
+      RequiresCompatibilities: 
+        - EC2
+      ContainerDefinitions: 
+        - Name: Suricata
+          Image: !Ref SuricataImage
+          MemoryReservation: 256
+          Essential: true
+          DependsOn:
+            - ContainerName: RulesFetcher
+              Condition: START
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${AWS::StackName}/container/suricata/stdout"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "stdout"
+              awslogs-create-group: "true"
+          LinuxParameters:
+            Capabilities:
+              Add:
+              - NET_ADMIN
+              - SYS_NICE
+          MountPoints:
+            - ContainerPath: /var/log/suricata
+              SourceVolume: SuricataLogs
+          VolumesFrom:
+            - SourceContainer: RulesFetcher
+              ReadOnly: True
+          PortMappings: 
+            -  ContainerPort: 80
+        - Name: RulesFetcher
+          Image: !Ref RulesFetcherImage
+          MemoryReservation: 32
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/${AWS::StackName}/container/rulesfetcher/stdout"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "stdout"
+              awslogs-create-group: "true"
+          Environment:
+            - Name: RulesetsSsmParameter
+              Value: !Sub /${AWS::StackName}/suricata/rulesets
+            - Name: MaxMindApiKey
+              Value: !Ref MaxMindApiKey
+            - Name: REGION
+              Value: !Ref AWS::Region
+            - Name: DynamicRulesS3Path
+              Value: !Ref DynamicRulesS3Path
+
+##
+## Compute
+##
+  SuricataSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: >-
+        Suricata Security group
+      SecurityGroupIngress:
+        - CidrIp: !Ref VpcCidr
+          IpProtocol: udp
+          FromPort: 6081
+          ToPort: 6081
+          Description: Ingress rule for Geneve protocol
+        - CidrIp: !Ref VpcCidr
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          Description: Ingress rule for HTTP Healthcheck
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+          FromPort: -1
+          ToPort: -1
+      Tags:
+        - Key: Name
+          Value: "Suricata SG"
+
+  Gwlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: gateway
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: True
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      Tags:
+      - Key: Name
+        Value: "Suricata GWLB"
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 6081
+      Protocol: GENEVE
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: "20"
+      VpcId: !Ref VpcId
+      HealthCheckPort: "80"
+      HealthCheckProtocol: HTTP
+      TargetType: instance
+      Tags:
+      - Key: Name
+        Value: "Suricata Target Group"
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref Gwlb
+
+  SuricataEcsInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeNetworkInterfaces
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub ${SuricataPcapBucket.Arn}/*
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub arn:aws:s3:::${DynamicRulesS3Path}
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                  - ssm:GetParametersByPath
+                  - ssm:PutParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}/suricata/*
+          PolicyName: SuricataEc2Policy
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+
+  SuricataEcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref SuricataEcsInstanceRole
+
+  SuricataLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref SuricataEcsInstanceProfile
+      InstanceType: !Ref SuricataInstanceType
+      ImageId: !Ref Ami
+      SecurityGroups:
+      - !Ref SuricataSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/bin/bash -x
+          
+          ################
+          # Preperations #
+          ################
+          
+          # Install packages
+          yum update -y
+          yum install -y amazon-cloudwatch-agent
+          yum install -y ethtool awscli iptables-services
+          
+          set -e
+          
+          # Define variables
+          curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document > /home/ec2-user/iid
+          instance_ip=$(cat /home/ec2-user/iid | awk -F '"' '/privateIp/ {print $4}')
+          instance_id=$(cat /home/ec2-user/iid | awk -F '"' '/instanceId/ {print $4}')
+          
+          # Enable IP Forwarding:
+          sysctl -w net.ipv4.ip_forward=1
+
+          ##########################
+          # IPTABLES CONFIGURATION #
+          ##########################
+
+          # Start and configure iptables:
+          systemctl enable iptables
+          systemctl start iptables
+          
+          # Flush the nat and mangle tables, flush all chains (-F), and delete all non-default chains (-X):
+          iptables -t nat -F
+          iptables -t mangle -F
+          iptables -F
+          iptables -X
+
+          # Set the default policies for each of the built-in chains to ACCEPT:
+          iptables -P INPUT ACCEPT
+          iptables -P FORWARD ACCEPT
+          iptables -P OUTPUT ACCEPT
+
+          # Set a punt to Suricata via NFQUEUE
+          iptables -I FORWARD -j NFQUEUE
+
+          # Configure nat table to hairpin traffic back to GWLB. Supports cross zone LB.
+          for i in $(aws --region ${AWS::Region} ec2 describe-network-interfaces --filters Name=vpc-id,Values=${VpcId} --query 'NetworkInterfaces[?InterfaceType==`gateway_load_balancer`].PrivateIpAddress' --output text); do 
+            iptables -t nat -A PREROUTING -p udp -s $i -d $instance_ip -i eth0 -j DNAT --to-destination $i:6081
+            iptables -t nat -A POSTROUTING -p udp --dport 6081 -s $i -d $i -o eth0 -j MASQUERADE
+          done
+
+          # Save iptables:
+          service iptables save
+          
+          #####################
+          # EFS CONFIGURATION #
+          #####################
+          mkdir -p /mnt/efs/
+          mount -t efs -o tls ${SuricataLogsEfs}:/ /mnt/efs/
+          mkdir -p /mnt/efs/$instance_id/suricata
+
+          ln -s /mnt/efs/$instance_id/suricata /var/log/
+          chown 1000 /var/log/suricata/ #Make the suricata user the owner of the log folder.
+
+          ###########################
+          # LOGROTATE CONFIGURATION #
+          ###########################
+          cat > /etc/logrotate.d/suricata << 'EOF'
+          /var/log/suricata/*.log /var/log/suricata/eve.json {
+          rotate 2
+          daily
+          size 200M
+          copytruncate
+          missingok
+          nocompress
+          createolddir
+          olddir /var/log/suricata/rotated/logs
+          }
+          EOF
+          
+          cat > /opt/logrotate.sh << 'EOF'
+          /usr/sbin/logrotate -s /var/lib/logrotate/logrotate.status /etc/logrotate.d/suricata
+          for I in $(ls -t /var/log/suricata/log.pcap.* | tail -n +2); do /usr/bin/aws s3 mv $I s3://${SuricataPcapBucket}/$(date -d @${!I##*.} +'%Y/%m/%d/%H:%M:%S'.pcap)  --content-type "application/vnd.tcpdump.pcap" --metadata InstanceId=$instance_id; done
+          EOF
+
+          chmod +x /opt/logrotate.sh
+          echo "* * * * * /opt/logrotate.sh > /dev/null 2>&1" | crontab -
+
+          ####################
+          # CLOUDWATCH AGENT #
+          ####################
+          cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json << 'EOF'
+          {
+            "agent": {
+              "metrics_collection_interval": 60,
+              "run_as_user": "cwagent"
+            },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    {"file_path": "/var/log/suricata/eve.json", "log_group_name": "/${AWS::StackName}/suricata/eve"},
+                    {"file_path": "/var/log/suricata/fast.log", "log_group_name": "/${AWS::StackName}/suricata/fast"},
+                    {"file_path": "/var/log/suricata/http.log", "log_group_name": "/${AWS::StackName}/suricata/http"},
+                    {"file_path": "/var/log/suricata/tls.log", "log_group_name": "/${AWS::StackName}/suricata/tls"},
+                    {"file_path": "/var/log/suricata/alert-debug.log", "log_group_name": "/${AWS::StackName}/suricata/alert-debug"},
+                    {"file_path": "/var/log/suricata/stats.log", "log_group_name": "/${AWS::StackName}/suricata/stats"},
+                    {"file_path": "/var/log/suricata/tcp-data.log", "log_group_name": "/${AWS::StackName}/suricata/tcp-data"},
+                    {"file_path": "/var/log/suricata/http-data.log", "log_group_name": "/${AWS::StackName}/suricata/http-data"},
+                    {"file_path": "/var/log/suricata/server.log","log_group_name": "/${AWS::StackName}/suricata/container"}
+                  ]
+                }
+              }
+            },
+            "metrics": {
+              "append_dimensions": {
+                "InstanceId": "${!aws:InstanceId}"
+              },
+              "metrics_collected": {
+                "disk": {
+                  "measurement": [
+                      "used_percent"
+                  ],
+                  "metrics_collection_interval": 60,
+                  "resources": [
+                      "*"
+                  ]
+                },
+                "mem": {
+                  "measurement": [
+                    "mem_used_percent"
+                  ],
+                  "metrics_collection_interval": 60
+                },
+                "ethtool": {
+                  "interface_exclude": [
+                    "docker0", 
+                    "lo"
+                  
+                  ],
+                  "metrics_include": [
+                    "rx_packets",
+                    "tx_packets",
+                    "bw_in_allowance_exceeded",
+                    "bw_out_allowance_exceeded",
+                    "conntrack_allowance_exceeded",
+                    "linklocal_allowance_exceeded",
+                    "pps_allowance_exceeded"
+                  ]
+                }
+              }
+            }
+          }
+          EOF
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+
+
+          ##############
+          # ECS CONFIG #
+          ##############
+          cat > /etc/ecs/ecs.config << 'EOF'
+          ECS_CLUSTER=${SuricataEcsCluster}
+          ECS_ENABLE_CONTAINER_METADATA=true
+          ECS_BACKEND_HOST=
+          EOF
+
+  SuricataAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: "0"
+      HealthCheckGracePeriod: 600
+      #HealthCheckType: ELB
+      LaunchConfigurationName: !Ref SuricataLaunchConfiguration
+      MaxSize: "10"
+      MinSize: "0"
+      NewInstancesProtectedFromScaleIn: false
+      VPCZoneIdentifier:
+      - !Ref PrivateSubnet1
+      - !Ref PrivateSubnet2
+      - !Ref PrivateSubnet3
+      TargetGroupARNs:
+      - !Ref TargetGroup
+      Tags:
+      - Key: Name
+        Value: 'Suricata Instance'
+        PropagateAtLaunch: True
+
+##
+## VPC Endpoint
+##
+  VpcEndpointService:
+    Type: AWS::EC2::VPCEndpointService
+    Properties:
+      GatewayLoadBalancerArns:
+        - !Ref Gwlb
+      AcceptanceRequired: False
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVpcEndpointServiceConfigurations
+                  - ec2:DescribeVpcEndpointServicePermissions
+                  - ec2:DescribeVpcEndpointServices
+                Resource: "*"
+
+  DescribeVpceService:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: "index.handler"
+      Role: !GetAtt
+        - LambdaExecutionRole
+        - Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          import logging
+          def handler(event, context):
+              logger = logging.getLogger()
+              logger.setLevel(logging.INFO)
+              responseData = {}
+              responseStatus = cfnresponse.FAILED
+              logger.info('Received event: {}'.format(json.dumps(event)))
+              if event["RequestType"] == "Delete":
+                  responseStatus = cfnresponse.SUCCESS
+                  cfnresponse.send(event, context, responseStatus, responseData)
+              if event["RequestType"] == "Create":
+                  try:
+                      VpceServiceId = event["ResourceProperties"]["Input"]
+                  except Exception as e:
+                      logger.info('VPC Endpoint Service Id retrival failure: {}'.format(e))
+                  try:
+                      ec2 = boto3.client('ec2')
+                  except Exception as e:
+                      logger.info('boto3.client failure: {}'.format(e))
+                  try:
+                      response = ec2.describe_vpc_endpoint_service_configurations(
+                          Filters=[
+                              {
+                                  'Name': 'service-id',
+                                  'Values': [VpceServiceId]
+                              }
+                          ]
+                      )
+                  except Exception as e:
+                      logger.info('ec2.describe_vpc_endpoint_service_configurations failure: {}'.format(e))
+                  ServiceName = response['ServiceConfigurations'][0]['ServiceName']
+                  responseData['Data'] = ServiceName
+                  responseStatus = cfnresponse.SUCCESS
+                  cfnresponse.send(event, context, responseStatus, responseData)
+      Runtime: python3.7
+      Timeout: 30
+
+  VpceServiceName:
+    Type: Custom::DescribeVpcEndpointServiceConfigurations
+    Properties:
+      ServiceToken: !GetAtt DescribeVpceService.Arn
+      Input: !Ref VpcEndpointService
+
+Outputs:
+  ApplianceGwlbArn:
+    Description: Appliance VPC GWLB ARN
+    Value: !Ref Gwlb
+  ApplianceVpcEndpointServiceId:
+    Description: Appliance VPC Endpoint Service ID
+    Value: !Ref VpcEndpointService
+  ApplianceVpcEndpointServiceName:
+    Description: Appliance VPC Endpoint Service Name. Required to create GWLB Endpoint
+    Value: !GetAtt VpceServiceName.Data

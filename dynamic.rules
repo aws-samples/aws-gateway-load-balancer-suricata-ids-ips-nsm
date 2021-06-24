@@ -1,0 +1,1 @@
+# Add your dynamic rules here. Dynamic rules are fetched automatically by the Rules fetcher container and will be used by suricata, on-the-fly without downtime and without the need to update the actual Suricata container. For rules that should be static and versioned together with Suricata. See static.rules

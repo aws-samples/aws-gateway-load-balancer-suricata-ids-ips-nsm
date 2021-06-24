@@ -1,0 +1,48 @@
+version: 0.2
+
+env:
+  shell: bash
+  exported-variables: image
+
+phases:
+  pre_build:
+    commands:
+      - deployed_md5sum=$(aws ssm get-parameter --name "$MD5SUM_SSM_PARAMETER" --region "$AWS_REGION" --output text --query Parameter.Value 2> /dev/null)
+      - commited_md5sum=$(find Dockerfiles/suricata/ -type f -exec md5sum {} + | awk '{print $1}' | LC_ALL=C sort | md5sum | awk '{print $1}')
+      - |
+        if [[ "$deployed_md5sum" != "$commited_md5sum" ]] ; then 
+          echo "Changes for the Suricata container found, the build continues."
+          build=true
+          COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+          IMAGE_TAG=${COMMIT_HASH:=latest}
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          docker pull $IMAGE_REPO_NAME:latest || true
+          cd Dockerfiles/suricata
+        else
+          build=false
+          echo "No changes for the Suricata container, exiting pre_build phase" 
+        fi
+  build:
+    commands: 
+      - echo "$build"
+      - |
+        if [[ "$build" == "true" ]]; then
+          docker build --cache-from $IMAGE_REPO_NAME:latest -t "$IMAGE_REPO_NAME:latest" .
+          docker tag "$IMAGE_REPO_NAME:latest" "$IMAGE_REPO_NAME:$IMAGE_TAG"
+        else
+          echo "No changes for the Suricata container, exiting build phase"   
+        fi 
+  post_build:
+    commands:
+      - echo "$build"
+      - |
+        if [[ "$build" == "true" ]]; then
+          docker push "$IMAGE_REPO_NAME:latest"
+          docker push "$IMAGE_REPO_NAME:$IMAGE_TAG"
+          image="$IMAGE_REPO_NAME:$IMAGE_TAG"
+          aws ssm put-parameter --name "$CONTAINERURI_SSM_PARAMETER" --region "$AWS_REGION" --value "$IMAGE_REPO_NAME:$IMAGE_TAG" --overwrite
+          aws ssm put-parameter --name "$MD5SUM_SSM_PARAMETER" --region "$AWS_REGION" --value "$commited_md5sum" --overwrite
+        else
+          echo "No changes for the Suricata container, resuing the last container tag from the last build and exiting post_build phase"
+          image=$(aws ssm get-parameter --name "$CONTAINERURI_SSM_PARAMETER" --region "$AWS_REGION" --output text --query Parameter.Value 2> /dev/null)
+        fi

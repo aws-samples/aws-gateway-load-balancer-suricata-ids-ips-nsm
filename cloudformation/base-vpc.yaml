@@ -1,0 +1,747 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Pipeline Automation Template
+
+Parameters:
+  GitRepo:
+    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
+    Type: String
+
+  VpcName:
+    Default: ips-service-vpc
+    Description: Logical name for the filtration and unspection VPC
+    Type: String
+  VpcCidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.0/25
+    Description: CIDR block for the VPC
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/y
+  PublicSubnet1Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.0/28
+    Description: CIDR block for the Public Subnet 1 located in AZ 1
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  PublicSubnet2Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.16/28
+    Description: CIDR block for the Public Subnet 2 located in AZ 2
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  PublicSubnet3Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.32/28
+    Description: CIDR block for the Public Subnet 3 located in AZ 3
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  PrivateSubnet1Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.48/28
+    Description: CIDR block for the Private Subnet 1 located in AZ 1
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  PrivateSubnet2Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.64/28
+    Description: CIDR block for the Private Subnet 2 located in AZ 2
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  PrivateSubnet3Cidr:
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    Default: 192.168.1.80/28
+    Description: CIDR block for the Private Subnet 3 located in AZ 3
+    Type: String
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+
+
+Resources:
+  # Pipeline #
+
+  SuricataEcrRepo:
+    Type: AWS::ECR::Repository
+
+  RulesFetcherEcrRepo:
+    Type: AWS::ECR::Repository
+
+  SuricataBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Sub ${AWS::StackName}-bucket-${AWS::Region}-${AWS::AccountId}
+      AccessControl: Private
+  
+  GitRepoToCodeCommitCustomResource:
+    Type: Custom::CopyGitRepoToS3
+    Properties:
+      ServiceToken: !GetAtt GitRepoToCodeCommitLambda.Arn
+
+  GitRepoToCodeCommitLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub ${SuricataBucket.Arn}/cloneFromGithub/*
+          PolicyName: PutS3Object
+
+  GitRepoToCodeCommitLambda:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Description: Lambda to be triggered by Cloudformation Custom resource to copy GitHub repo to CodeCommit repo
+      Code: 
+        ZipFile: |
+          import boto3
+          import logging
+          import os
+          import shutil
+          import cfnresponse
+          s3 = boto3.client('s3')
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          repo = os.environ['GitRepo']
+          s3Bucket = os.environ['s3Bucket']
+          path = '/tmp/repo' 
+          s3ObjectName = 'ipsautomation'
+          s3ObjectExtension = 'zip'
+          s3ObjectFullName = s3ObjectName + '.' + s3ObjectExtension
+          def lambda_handler(event, context):
+              response_data = {}
+              try:
+                  logger.info('Create path and change working directory to: %s' % (path))
+                  os.mkdir(path)
+                  os.chdir(path)
+                  logger.info('Clone the repository: %s to: %s' % (repo, path))
+                  os.system('git clone ' + repo + ' cloned-repo')
+                  shutil.rmtree('cloned-repo/.git')
+                  logger.info('Clone complete. Files in working directory:')
+                  logger.info(os.listdir(os.getcwd()))
+                  logger.info('Create Zip from repo')
+                  shutil.make_archive(s3ObjectName, s3ObjectExtension,'cloned-repo','.')
+                  logger.info('Created zip from repo. Files in working directory:')
+                  logger.info(os.listdir(os.getcwd()))
+                  logger.info('Uploading %s to S3://%s/%s' % (s3ObjectFullName, s3Bucket, 'cloneFromGithub/'+s3ObjectFullName))
+                  s3.upload_file(os.getcwd() + '/' + s3ObjectFullName, s3Bucket, 'cloneFromGithub/'+s3ObjectFullName)
+                  logger.info('Upload Complete. Cleaning directory')
+                  shutil.rmtree(path)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+              except Exception as e:
+                  logger.error('Execution failed...')
+                  logger.error(str(e))
+                  response_data['Data'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+      Environment: 
+        Variables:
+          GitRepo: !Ref GitRepo
+          s3Bucket: !Ref SuricataBucket
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Layers: 
+        - !Sub arn:aws:lambda:${AWS::Region}:553035198032:layer:git-lambda2:8 # https://github.com/lambci/git-lambda-layer
+      MemorySize: 1024
+      Role: !GetAtt GitRepoToCodeCommitLambdaRole.Arn
+
+  CCRepo:
+    DependsOn:
+      - GitRepoToCodeCommitCustomResource
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Code: 
+        S3:
+          Bucket: !Ref SuricataBucket
+          Key: cloneFromGithub/ipsautomation.zip
+      RepositoryDescription: Repository for holding IPS solution Automation Code
+      RepositoryName: !Sub ${AWS::StackName}-repository
+
+  CPipelineCloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: cfnRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action: '*'
+                Resource: '*'
+
+  CPipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: 
+                Service: 
+                  - codepipeline.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CodePipelineRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+                - Effect: Allow
+                  Action:
+                    - codecommit:CancelUploadArchive
+                    - codecommit:GetBranch
+                    - codecommit:GetCommit
+                    - codecommit:GetUploadArchiveStatus
+                    - codecommit:UploadArchive
+                  Resource: !Sub arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${CCRepo.Name}
+                - Effect: Allow
+                  Action:
+                    - codebuild:StartBuild
+                    - codebuild:BatchGetBuilds
+                  Resource: 
+                    - !GetAtt SuricataBuildProject.Arn
+                    - !GetAtt RulesFetcherBuildProject.Arn
+                - Effect: Allow
+                  Action:
+                    - cloudformation:CreateStack
+                    - cloudformation:DeleteStack
+                    - cloudformation:DescribeStacks
+                    - cloudformation:UpdateStack
+                    - cloudformation:CreateChangeSet
+                    - cloudformation:DeleteChangeSet
+                    - cloudformation:DescribeChangeSet
+                    - cloudformation:ExecuteChangeSet
+                    - cloudformation:SetStackPolicy
+                    - cloudformation:ValidateTemplate
+                  Resource: "*"
+                - Effect: Allow
+                  Action:
+                    - iam:PassRole
+                  Resource:
+                    - !GetAtt CPipelineCloudFormationRole.Arn
+                - Effect: Allow
+                  Action:
+                    - s3:*
+                  Resource: 
+                    - !Sub ${SuricataBucket.Arn}
+                    - !Sub ${SuricataBucket.Arn}/*
+
+  CPipelineCodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodebuildRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:PutImage
+                  - ecr:PutImageTagMutability
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchGetImage 
+                  - ecr:GetDownloadUrlForLayer
+                Resource:
+                  - !Sub ${SuricataEcrRepo.Arn}
+                  - !Sub ${RulesFetcherEcrRepo.Arn}
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter*
+                  - ssm:PutParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}/codebuild/*
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub ${SuricataBucket.Arn}
+                  - !Sub ${SuricataBucket.Arn}/*
+
+  SuricataMd5sumParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/codebuild/container/suricata/md5sum
+      Type:  String
+      Value: " "
+
+  SuricataImageUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/codebuild/container/suricata/uri
+      Type:  String
+      Value: " "
+
+  RulesFetcherMd5sumParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/codebuild/container/rulesFetcher/md5sum
+      Type:  String
+      Value: " "
+
+  RulesFetcherImageUriParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/codebuild/container/rulesFetcher/uri
+      Type:  String
+      Value: " "
+
+  SuricataBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Artifacts: 
+        Type: CODEPIPELINE
+      Environment: 
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/standard:4.0
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        ImagePullCredentialsType: CODEBUILD
+        EnvironmentVariables:
+          - Name: AWS_REGION
+            Type: PLAINTEXT
+            Value: !Ref AWS::Region
+          - Name: MD5SUM_SSM_PARAMETER
+            Type: PLAINTEXT
+            Value: !Sub /${AWS::StackName}/codebuild/container/suricata/md5sum
+          - Name: CONTAINERURI_SSM_PARAMETER
+            Type: PLAINTEXT
+            Value: !Sub /${AWS::StackName}/codebuild/container/suricata/uri
+          - Name: MAXMIND_API_KEY_PARAMETER
+            Type: PLAINTEXT
+            Value: !Sub /${AWS::StackName}/codebuild/container/suricata/maxmindapikey
+          - Name: AWS_ACCOUNT_ID
+            Type: PLAINTEXT
+            Value: !Ref AWS::AccountId
+          - Name: IMAGE_REPO_NAME
+            Type: PLAINTEXT
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SuricataEcrRepo}
+      LogsConfig: 
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: codebuild
+      ServiceRole: !GetAtt CPipelineCodeBuildRole.Arn
+      Source: 
+        Type: CODEPIPELINE
+        BuildSpec: Dockerfiles/suricata/buildspec.yml
+
+  RulesFetcherBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Artifacts: 
+        Type: CODEPIPELINE
+      Environment: 
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/standard:4.0
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        ImagePullCredentialsType: CODEBUILD
+        EnvironmentVariables:
+          - Name: AWS_REGION
+            Type: PLAINTEXT
+            Value: !Ref AWS::Region
+          - Name: MD5SUM_SSM_PARAMETER
+            Type: PLAINTEXT
+            Value: !Sub /${AWS::StackName}/codebuild/container/rulesFetcher/md5sum
+          - Name: CONTAINERURI_SSM_PARAMETER
+            Type: PLAINTEXT
+            Value: !Sub /${AWS::StackName}/codebuild/container/rulesFetcher/uri
+          - Name: AWS_ACCOUNT_ID
+            Type: PLAINTEXT
+            Value: !Ref AWS::AccountId
+          - Name: IMAGE_REPO_NAME
+            Type: PLAINTEXT
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${RulesFetcherEcrRepo}
+      LogsConfig: 
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: codebuild
+      ServiceRole: !GetAtt CPipelineCodeBuildRole.Arn
+      Source: 
+        Type: CODEPIPELINE
+        BuildSpec: Dockerfiles/rulesFetcher/buildspec.yml
+
+  CPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties: 
+      ArtifactStore: 
+        Type: S3 
+        Location: !Ref SuricataBucket
+      DisableInboundStageTransitions:
+        - Reason: "Disabling to permit code changes to internal stack before initial deployment"
+          StageName: BuildStage
+      Name: !Sub ${AWS::StackName}-pipeline
+      RoleArn: !GetAtt CPipelineServiceRole.Arn
+      Stages:
+      - Name: SourceStage
+        Actions:
+          - Name: Source
+            ActionTypeId:
+              Category: Source
+              Owner: AWS
+              Provider: CodeCommit
+              Version: '1'
+            Configuration:
+              RepositoryName: !GetAtt CCRepo.Name
+              BranchName: main
+              PollForSourceChanges: 'false'
+            OutputArtifacts:
+              - Name: SourceArtifact
+            RunOrder: 1
+      - Name: BuildStage
+        Actions:
+          - Name: BuildSuricataContainer
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Provider: CodeBuild
+              Version: '1'
+            Configuration:
+              ProjectName: !Ref SuricataBuildProject
+            InputArtifacts:
+              - Name: SourceArtifact
+            Namespace: SuricataBuild
+            RunOrder: 1
+          - Name: BuildRulesFetcherContainer
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Provider: CodeBuild
+              Version: '1'
+            Configuration:
+              ProjectName: !Ref RulesFetcherBuildProject
+            InputArtifacts:
+              - Name: SourceArtifact
+            Namespace: RulesFetcherBuild
+            RunOrder: 1
+          - Name: CopyToS3
+            ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Provider: S3
+              Version: '1'
+            InputArtifacts:
+              - Name: SourceArtifact
+            Configuration:
+              BucketName: !Ref SuricataBucket
+              Extract: true
+              ObjectKey: deployment
+            RunOrder: 1
+      - Name: DeployApplicationStage
+        Actions:
+          - Name: CreateChangeSet
+            ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Provider: CloudFormation
+              Version: '1'
+            InputArtifacts:
+              - Name: SourceArtifact
+            Configuration:
+              ActionMode: CHANGE_SET_REPLACE
+              Capabilities: CAPABILITY_IAM
+              RoleArn: !GetAtt CPipelineCloudFormationRole.Arn
+              StackName: !Sub ${AWS::StackName}-suricata-cluster
+              ChangeSetName: !Sub ${AWS::StackName}-suricata-cluster-cset
+              TemplatePath: SourceArtifact::cloudformation/suricata/cluster.yaml
+              TemplateConfiguration: SourceArtifact::cloudformation/suricata/cluster-template-configuration.json
+              ParameterOverrides: !Sub |
+                {
+                  "VpcId": "${VPC}",
+                  "VpcCidr": "${VpcCidr}",
+                  "PrivateSubnet1": "${PrivateSubnet1}",
+                  "PrivateSubnet2": "${PrivateSubnet2}",
+                  "PrivateSubnet3": "${PrivateSubnet3}",
+                  "DynamicRulesS3Path": "${SuricataBucket}/deployment/dynamic.rules",
+                  "SuricataImage": "#{SuricataBuild.image}",
+                  "RulesFetcherImage": "#{RulesFetcherBuild.image}"
+                }
+            RunOrder: 1
+          - Name: ExecuteChangeSet
+            ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Provider: CloudFormation
+              Version: '1'
+            Configuration:
+              ActionMode: CHANGE_SET_EXECUTE
+              ChangeSetName: !Sub ${AWS::StackName}-suricata-cluster-cset
+              RoleArn: !GetAtt CPipelineCloudFormationRole.Arn
+              StackName: !Sub ${AWS::StackName}-suricata-cluster
+            RunOrder: 2
+
+  CPipelineCloudWatchEventRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            -
+              Effect: Allow
+              Principal:
+                Service:
+                  - events.amazonaws.com
+              Action: sts:AssumeRole
+        Path: /
+        Policies:
+          - PolicyName: CWEvenetRolePolicy
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                -
+                  Effect: Allow
+                  Action: codepipeline:StartPipelineExecution
+                  Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-pipeline
+
+  CPipelineCloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.codecommit
+        detail-type:
+          - 'CodeCommit Repository State Change'
+        resources:
+          - !Sub arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-repository
+        detail:
+          event:
+            - referenceCreated
+            - referenceUpdated
+          referenceType:
+            - branch
+          referenceName:
+            - main
+      Targets:
+        - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-pipeline
+          RoleArn: !GetAtt CPipelineCloudWatchEventRole.Arn
+          Id: codepipeline-AppPipeline
+
+  # Network #
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: "Name"
+          Value:  !Ref VpcName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Subnets
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PublicSubnet3Cidr
+      AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+
+  PublicSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PublicSubnetDefaultIPv4Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PublicSubnetRouteTable
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicSubnetRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicSubnetRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicSubnetRouteTable
+      SubnetId: !Ref PublicSubnet3
+
+  # NAT
+
+  NatGwPublicSubnet1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+        AllocationId: !Sub ${NatGwPublicSubnet1EIP.AllocationId}
+        SubnetId: !Ref PublicSubnet1
+
+  NatGwPublicSubnet1EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+        Domain: vpc
+
+  NatGwPublicSubnet2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+        AllocationId: !Sub ${NatGwPublicSubnet2EIP.AllocationId}
+        SubnetId: !Ref PublicSubnet2
+
+  NatGwPublicSubnet2EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+        Domain: vpc
+
+  NatGwPublicSubnet3:
+    Type: AWS::EC2::NatGateway
+    Properties:
+        AllocationId: !Sub ${NatGwPublicSubnet3EIP.AllocationId}
+        SubnetId: !Ref PublicSubnet3
+
+  NatGwPublicSubnet3EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+        Domain: vpc
+
+  # Private Subnets
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateSubnet1DefaultIPv4Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PrivateSubnet1RouteTable
+      NatGatewayId: !Ref NatGwPublicSubnet1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateSubnet1RouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateSubnet2DefaultIPv4Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PrivateSubnet2RouteTable
+      NatGatewayId: !Ref NatGwPublicSubnet2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateSubnet2RouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PrivateSubnet3Cidr
+      AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateSubnet3DefaultIPv4Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PrivateSubnet3RouteTable
+      NatGatewayId: !Ref NatGwPublicSubnet3
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateSubnet3RouteTable
+      SubnetId: !Ref PrivateSubnet3
