@@ -20,7 +20,7 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
 
-  PcapLogRententionS3:
+  PcapLogRentention:
     Description: "How many days Pcap log should be saved in S3"
     Default: 30
     Type: Number
@@ -128,7 +128,7 @@ Resources:
   SuricataPcapBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-pcapbucket
+      BucketName: !Sub ${AWS::StackName}-pcapbucket-${AWS::Region}-${AWS::AccountId}
       LifecycleConfiguration:
         Rules:
           - Status: Enabled
