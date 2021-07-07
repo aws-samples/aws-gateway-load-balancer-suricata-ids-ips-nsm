@@ -39,11 +39,11 @@ phases:
       - echo "$build"
       - |
         if [[ "$build" == "true" ]]; then
-          docker push "$IMAGE_REPO_NAME:latest"
-          docker push "$IMAGE_REPO_NAME:$IMAGE_TAG"
+          docker push "$IMAGE_REPO_NAME:latest" && \ 
+          docker push "$IMAGE_REPO_NAME:$IMAGE_TAG" && \ 
+          aws ssm put-parameter --name "$CONTAINERURI_SSM_PARAMETER" --region "$AWS_REGION" --value "$IMAGE_REPO_NAME:$IMAGE_TAG" --overwrite && \
+          aws ssm put-parameter --name "$MD5SUM_SSM_PARAMETER" --region "$AWS_REGION" --value "$commited_md5sum" --overwrite && \
           image="$IMAGE_REPO_NAME:$IMAGE_TAG"
-          aws ssm put-parameter --name "$CONTAINERURI_SSM_PARAMETER" --region "$AWS_REGION" --value "$IMAGE_REPO_NAME:$IMAGE_TAG" --overwrite
-          aws ssm put-parameter --name "$MD5SUM_SSM_PARAMETER" --region "$AWS_REGION" --value "$commited_md5sum" --overwrite
         else
           echo "No changes for the Rules fetcher container, resuing the last container tag from the last build and exiting post_build phase"
           image=$(aws ssm get-parameter --name "$CONTAINERURI_SSM_PARAMETER" --region "$AWS_REGION" --output text --query Parameter.Value 2> /dev/null)
