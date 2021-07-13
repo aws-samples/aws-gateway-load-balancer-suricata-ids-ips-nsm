@@ -1,7 +1,7 @@
 ##### 1. Deploy the base template
 Deploy the base template [base-new-vpc.yaml in your account](/cloudformation/base-new-vpc.yaml)
 
-If you need help deploying the stack using Cloudforamtion, please see the [Official Cloudformation Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacks.html): Creating Stacks using the [AWS Console](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html) or the [CLI](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-cli-creating-stack.html)
+If you need help deploying the stack using Cloudformation, please see the [Official Cloudformation Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacks.html): Creating Stacks using the [AWS Console](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html) or the [CLI](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-cli-creating-stack.html)
 
 
 ###### Template Parameters
@@ -10,12 +10,12 @@ The base template have the following configurable stack parameters:
 |-|-|-|
 |VpcName|ips-service-vpc|Inspection VPC Name
 |VpcCidr|192.168.1.0/25|Inspection VPC CIDR
-|PublicSubnet1Cidr|192.168.1.0/28|Inspection VPC Public Subnet 1 CIDR
-|PublicSubnet2Cidr|192.168.1.16/28|Inspection VPC Public Subnet 2 CIDR
-|PublicSubnet3Cidr|192.168.1.32/28|Inspection VPC Public Subnet 3 CIDR
-|PrivateSubnet1Cidr|192.168.1.48/28|Inspection VPC Private Subnet 1 CIDR
-|PrivateSubnet2Cidr|192.168.1.64/28|Inspection VPC Private Subnet 2 CIDR
-|PrivateSubnet3Cidr|192.168.1.80/28|Inspection VPC Private Subnet 3 CIDR
+|PublicSubnet1Cidr|192.168.1.0/28|CIDR block for the Public Subnet 1 located in AZ 1 - Contains NAT Gateway
+|PublicSubnet2Cidr|192.168.1.16/28|CIDR block for the Public Subnet 2 located in AZ 2 - Contains NAT Gateway
+|PublicSubnet3Cidr|192.168.1.32/28|CIDR block for the Public Subnet 3 located in AZ 3 - Contains NAT Gateway
+|PrivateSubnet1Cidr|192.168.1.48/28|CIDR block for the Private Subnet 1 located in AZ 1 - Contains Gateway Load Balancer, ECS(Suricata), EFS(temp log storage)
+|PrivateSubnet2Cidr|192.168.1.64/28|CIDR block for the Private Subnet 2 located in AZ 2 - Contains Gateway Load Balancer, ECS(Suricata), EFS(temp log storage)
+|PrivateSubnet3Cidr|192.168.1.80/28|CIDR block for the Private Subnet 3 located in AZ 3 - Contains Gateway Load Balancer, ECS(Suricata), EFS(temp log storage)
 
 The Base template creates the GitOps Pipeline and VPC where the Suricata environment will be deployed.
 ![Solution Overview](/img/suricata-ecs-base.png)
@@ -27,7 +27,7 @@ Let's go ahead and deploy Suricata:
 Go to AWS CodePipeline and select "Enable Transition". The pipeline will now start to build a docker image and after that deploy your suricata cluster using the Cloudformation template [cluster.yaml](/cloudformation/suricata/cluster.yaml).
 
 ##### 3. Use Suricata in a Centralized or Distributed architecture
-For quick testing: Create a Cloudformation stack using this [template](https://github.com/aws-samples/aws-gateway-load-balancer-code-samples/blob/main/aws-cloudformation/distributed_architecture/DistributedArchitectureSpokeVpc2Az.yaml) and use the Cloudformation output of `ApplianceVpcEndpointServiceName` from the suricata cluster cloudforamtion stack as the input to the `ServiceName` parameter.
+For quick testing: Deploy a Distributed architecture using this [Cloudformation template](https://github.com/aws-samples/aws-gateway-load-balancer-code-samples/blob/main/aws-cloudformation/distributed_architecture/DistributedArchitectureSpokeVpc2Az.yaml) and use the Cloudformation output of `ApplianceVpcEndpointServiceName` from the suricata cluster cloudformation stack as the input to the `ServiceName` parameter when launching the Distributed architecture Cloudforamtion template.
 
 
 ### Solution Components
@@ -39,7 +39,7 @@ The CloudFormation template that the pipeline calls, will instantiate several se
 
 An appliance VPC is created for you, consisting of three private subnets that have access to the ECS service APIs and external code repositories, care of a Nat Gateway and Internet Gateway. You can specify suitable CIDR ranges within the ‘base-vpc.yaml’ template within the code repository – defaults have been provided for you.
 
-![VPC](img/vpc.png)
+![VPC](/img/vpc.png)
 
 #### GWLB
 
@@ -85,27 +85,27 @@ Both the Suricata and RulesFetcher containers use a [BindMount](https://docs.aws
 
 Various parameters are used by the solution, these are listed below:
 
-1. '/ipsautomation-pipelinestack-suricata-cluster/suricata/cloudwatchconfig'
+1. '/<stack-name>/suricata/cloudwatchconfig'
 
     >This parameter is used to hold the CloudWatch Agent configuration that is used by the ECS hosts as they boot
 
-2. '/ipsautomation-pipelinestack-suricata-cluster/suricata/rulesets'
+2. '/<stack-name>/suricata/rulesets'
 
-    >This parameter is read by the RulesFetcher container periodically. Modifications to this parameter will cause a ruleset download or potentially a removal to take place.
+    >This parameter is read by the RulesFetcher container periodically. Modifications to this parameter will cause a ruleset update, ruleset download or ruleset removal to take place.
 
-3. '/ipsautomation-pipelinestack/codebuild/container/rulesFetcher/md5sum'
+3. '/<stack-name>/codebuild/container/rulesFetcher/md5sum'
 
-    >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository
+    >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new rulesFetcher container to save CI/CD time.
 
-4. '/ipsautomation-pipelinestack/codebuild/container/rulesFetcher/uri'
+4. '/<stack-name>/codebuild/container/rulesFetcher/uri'
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the RulesFetcher container
 
-5. '/ipsautomation-pipelinestack/codebuild/container/suricata/md5sum'
+5. '/<stack-name>/codebuild/container/suricata/md5sum'
 
-    >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository
+    >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new Suricata container to save CI/CD time.
 
-6. '/ipsautomation-pipelinestack/codebuild/container/suricata/uri'
+6. '/<stack-name>/codebuild/container/suricata/uri'
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the Suricata container
 #### Amazon S3
