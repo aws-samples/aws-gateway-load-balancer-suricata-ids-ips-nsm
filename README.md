@@ -6,8 +6,10 @@ This Suricata deployment can then be used as a target for Gateway Load Balancer 
 
 ## How to deploy
 ### Quickstart
-The quickest way to deploy the full solution that consists of Suricata running on ECS and the GitOps CI/CD pipeline used for Suricata configuration is to deploy the solution using any of the `base`-clouformation templates. These templates will setup the GitOps pipeline and will copy this GitHub Repo into AWS CodeCommit which will be the Git repo you work against.
-The [base-new-vpc.yaml](/cloudformation/base-new-vpc.yaml) template will setup a new environment from scratch, including a VPC where Suricata will be deployed. 
+The quickest way to deploy the full solution that consists of Suricata running on ECS and the GitOps CI/CD pipeline used for Suricata configuration is to deploy the solution using any of the `base`-clouformation templates. These templates will setup the GitOps pipeline and will copy this GitHub Repo into AWS CodeCommit which will be the Git repo you work against to setup Suricata rules, suricata configuration etc.
+
+The [base-new-vpc.yaml](/cloudformation/base-new-vpc.yaml) template will setup a new environment from scratch, including a VPC where Suricata will be deployed.
+
 The [base-existing-vpc.yaml](/cloudformation/base-existing-vpc.yaml) template (TODO) will deploy Suricata in an already existing VPC. You need to make sure your existing VPC supports the minimum requirments.
 
 For deployment documentation and walkthrough, see:
@@ -20,13 +22,6 @@ For deployment documentation and walkthrough, see:
 ### Use Suricata for network inspection
 After you have deployed Suricata you would need to create and setup Gateway Load balancer VPC Endpoints so Suricata can be used to Inspect your networking traffic. 
 [docs/architectures](/docs/architectures) contains a number of architectures where Suricata can be used as a scalable network security appliance.
-
-/* **A CloudFormation template will be used to deploy the solution:**
-
-The '/cloudformation/base-vpc.yaml' template creates a complete new environment with a VPC where Suricata will be deployed.' Should you wish to use an existing VPC you will need to ensure that it has three private subnets with a default route to a Nat Gateway. The Nat Gateway will of course need to be within a subnet that has the ability to reach the internet via an Internet Gateway.
-
-![Solution Overview](/img/suricata-ecs-cluster.png) */
-
 
 ## Commmon questions:
 
@@ -48,6 +43,7 @@ In the default suricata configuration provided in this repo, suricata will use t
 
 You can disable these logs or enable other logs by editing the suricata config: `/Dockerfiles/suricata/etc/suricata/suricata.yml`. You don't need to configure the Cloudwatch Agent to puckup new enabled logs. The Cloudwatch Agent is configured to automatically tail and stream Suricata logs from their default location to CloudWatch Logs. 
 
+The stdout from the Suricata and RuleFetcher container is also logging to CloudWatch Logs per default. 
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
