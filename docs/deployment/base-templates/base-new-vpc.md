@@ -85,27 +85,27 @@ Both the Suricata and RulesFetcher containers use a [BindMount](https://docs.aws
 
 Various parameters are used by the solution, these are listed below:
 
-1. '/<stack-name>/suricata/cloudwatchconfig'
+1. '/*%stack-name%*/suricata/cloudwatchconfig'
 
     >This parameter is used to hold the CloudWatch Agent configuration that is used by the ECS hosts as they boot
 
-2. '/<stack-name>/suricata/rulesets'
+2. '/*%stack-name%*/suricata/rulesets'
 
     >This parameter is read by the RulesFetcher container periodically. Modifications to this parameter will cause a ruleset update, ruleset download or ruleset removal to take place.
 
-3. '/<stack-name>/codebuild/container/rulesFetcher/md5sum'
+3. '/*%stack-name%*/codebuild/container/rulesFetcher/md5sum'
 
     >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new rulesFetcher container to save CI/CD time.
 
-4. '/<stack-name>/codebuild/container/rulesFetcher/uri'
+4. '/*%stack-name%*/codebuild/container/rulesFetcher/uri'
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the RulesFetcher container
 
-5. '/<stack-name>/codebuild/container/suricata/md5sum'
+5. '/*%stack-name%*/codebuild/container/suricata/md5sum'
 
     >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new Suricata container to save CI/CD time.
 
-6. '/<stack-name>/codebuild/container/suricata/uri'
+6. '/*%stack-name%*/codebuild/container/suricata/uri'
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the Suricata container
 #### Amazon S3
