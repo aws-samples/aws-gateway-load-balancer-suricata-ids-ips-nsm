@@ -79,7 +79,10 @@ Resources:
   SuricataBucket:
     Type: AWS::S3::Bucket
     Properties: 
-      BucketName: !Sub ${AWS::StackName}-bucket-${AWS::Region}-${AWS::AccountId}
+      BucketName: !Sub 
+        - suricata-codepipeline-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
+        - RandomizedValue:
+            Fn::Select: [0, Fn::Split: [-, Fn::Select: [2, Fn::Split: [/, !Ref AWS::StackId ]]]] # Takes the first part of the random GUID in the cloudformation stacks arn.
       AccessControl: Private
   
   GitRepoToCodeCommitCustomResource:
