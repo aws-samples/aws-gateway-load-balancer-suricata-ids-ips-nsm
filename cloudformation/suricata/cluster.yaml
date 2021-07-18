@@ -20,7 +20,7 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
 
-  PcapLogRentention:
+  PcapLogRententionS3:
     Description: "How many days Pcap log should be saved in S3"
     Default: 30
     Type: Number
