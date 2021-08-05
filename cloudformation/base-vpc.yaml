@@ -178,7 +178,7 @@ Resources:
                   os.mkdir(path)
                   os.chdir(path)
                   logger.info('Clone the repository: %s to: %s' % (repo, path))
-                  os.system('git clone ' + repo + ' cloned-repo' + ' -b branch')
+                  os.system('git clone ' + repo + ' cloned-repo' + ' -branch' branch')
                   shutil.rmtree('cloned-repo/.git')
                   logger.info('Clone complete. Files in working directory:')
                   logger.info(os.listdir(os.getcwd()))
