@@ -1,4 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Description: Lab environment for 2021 AWS re:Invent Build an open-source IDS/IPS/NSM service for Gateway Load Balancer - bring out your inner MeerKat - Inspection appliance stack.
+
 
 Parameters:
   VpcId:
@@ -331,7 +333,7 @@ Resources:
       Type: gateway
       LoadBalancerAttributes:
         - Key: load_balancing.cross_zone.enabled
-          Value: True
+          Value: False
       Subnets:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
