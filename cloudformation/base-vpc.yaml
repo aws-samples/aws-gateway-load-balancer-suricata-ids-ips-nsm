@@ -3,7 +3,10 @@ Description: Lab environment for 2021 AWS re:Invent Build an open-source IDS/IPS
 
 Parameters:
   GitRepo:
-    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm/tree/reiv-wrksp
+    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm
+    Type: String
+  GitBranch:
+    Default: reiv-wrksp
     Type: String
 
   VpcName:
@@ -162,6 +165,7 @@ Resources:
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
           repo = os.environ['GitRepo']
+          branch = os.environ['GitBranch']
           s3Bucket = os.environ['s3Bucket']
           path = '/tmp/repo' 
           s3ObjectName = 'ipsautomation'
@@ -174,7 +178,7 @@ Resources:
                   os.mkdir(path)
                   os.chdir(path)
                   logger.info('Clone the repository: %s to: %s' % (repo, path))
-                  os.system('git clone ' + repo + ' cloned-repo')
+                  os.system('git clone ' + repo + ' cloned-repo' + ' -b branch')
                   shutil.rmtree('cloned-repo/.git')
                   logger.info('Clone complete. Files in working directory:')
                   logger.info(os.listdir(os.getcwd()))
@@ -195,6 +199,7 @@ Resources:
       Environment: 
         Variables:
           GitRepo: !Ref GitRepo
+          GitBranch: !Ref GitBranch
           s3Bucket: !Ref SuricataBucket
       Handler: index.lambda_handler
       Runtime: python3.8
