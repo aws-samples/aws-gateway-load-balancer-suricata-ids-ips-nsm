@@ -3,7 +3,7 @@ Description: Lab environment for 2021 AWS re:Invent Build an open-source IDS/IPS
 
 Parameters:
   GitRepo:
-    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
+    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm/tree/reiv-wrksp
     Type: String
 
   VpcName:
@@ -90,7 +90,7 @@ Parameters:
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
   PipelineActions:
     Description: > 
-      If CodePipeline actions are going to be ran in Parallel or in sequence. 
+      If CodePipeline actions are going to be run in Parallel or in sequence. 
       Parallel is faster but in some special cases, such as using an AWS account provided by AWS for an workshop (Event Engine AWS Account) - CodePipeline might have limits on how many concurrent CodeBuild actions that can be ran in parallel.
       In those cases, change the value to 'sequence'.
     Default: parallel
