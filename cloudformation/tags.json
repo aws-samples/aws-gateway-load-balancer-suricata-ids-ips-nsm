@@ -1,0 +1,10 @@
+[
+    {
+        "Key": "auto-delete",
+        "Value": "never"
+    },
+    {
+        "Key": "auto-stop",
+        "Value": "no"
+    }
+]
