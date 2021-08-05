@@ -593,7 +593,7 @@ Resources:
     Properties:
       DesiredCapacity: "0"
       HealthCheckGracePeriod: 600
-      #HealthCheckType: ELB
+      HealthCheckType: ELB
       LaunchConfigurationName: !Ref SuricataLaunchConfiguration
       MaxSize: "10"
       MinSize: "0"
