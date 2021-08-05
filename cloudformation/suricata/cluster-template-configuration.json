@@ -6,5 +6,9 @@
 		"SuricataRulesets": "",
 		"MaxMindApiKey": "",
 		"SuricataInstanceType": "t3.large"
-    }
+    },
+	"Tags" : {
+		"auto-delete" : "never",
+        "auto-stop" : "no"
+	}
 }

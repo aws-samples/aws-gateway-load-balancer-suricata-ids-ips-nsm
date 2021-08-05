@@ -128,7 +128,10 @@ Resources:
   SuricataPcapBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-pcapbucket
+      BucketName: !Sub 
+        - suricata-pcapfiles-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
+        - RandomizedValue:
+            Fn::Select: [0, Fn::Split: [-, Fn::Select: [2, Fn::Split: [/, !Ref AWS::StackId ]]]] # Takes the first part of the random GUID in the cloudformation stacks arn.
       LifecycleConfiguration:
         Rules:
           - Status: Enabled
@@ -197,18 +200,14 @@ Resources:
     DependsOn:
       - "SuricataAutoScalingGroup"
       - "SuricataCapacityProviderAssociation" 
-    Properties: 
-      CapacityProviderStrategy: 
-        - CapacityProvider: !Ref SuricataCapacityProvider
-          Base: 2
-          Weight: 1
+    Properties:
       Cluster: !Ref SuricataEcsCluster
       DeploymentConfiguration: 
         MaximumPercent: 100
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 2
+      DesiredCount: 3
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
