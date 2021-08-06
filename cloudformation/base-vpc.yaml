@@ -644,6 +644,9 @@ Resources:
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Public Subnet 1"
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -652,6 +655,9 @@ Resources:
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Public Subnet 2"
 
   PublicSubnet3:
     Type: AWS::EC2::Subnet
@@ -660,11 +666,17 @@ Resources:
       AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Public Subnet 3"
 
   PublicSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Public Subnets Route Table"
 
   PublicSubnetDefaultIPv4Route:
     Type: AWS::EC2::Route
@@ -735,11 +747,17 @@ Resources:
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 1"
 
   PrivateSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 1 Route Table"
 
   PrivateSubnet1DefaultIPv4Route:
     Type: AWS::EC2::Route
@@ -761,11 +779,18 @@ Resources:
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 2"
 
   PrivateSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 2 Route Table"
+      
 
   PrivateSubnet2DefaultIPv4Route:
     Type: AWS::EC2::Route
@@ -787,11 +812,17 @@ Resources:
       AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 3"
 
   PrivateSubnet3RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - Private Subnet 3 Route Table"
 
   PrivateSubnet3DefaultIPv4Route:
     Type: AWS::EC2::Route
@@ -815,11 +846,17 @@ Resources:
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 1"
 
   TGWSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 1 Route Table"
 
   TGWSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -834,11 +871,17 @@ Resources:
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 2"
 
   TGWSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 2 Route Table"
 
   TGWSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -853,11 +896,17 @@ Resources:
       AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 3"
 
   TGWSubnet3RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - TGW Subnet 3 Route Table"
 
   TGWSubnet3RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -874,11 +923,17 @@ Resources:
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 1"
 
   FWSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 1 Route Table"
 
   FWSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -893,11 +948,17 @@ Resources:
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 2"
 
   FWSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 2 Route Table"
 
   FWSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -912,11 +973,17 @@ Resources:
       AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 3"
 
   FWSubnet3RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: "Filter VPC - FW Subnet 3 Route Table"
 
   FWSubnet3RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
