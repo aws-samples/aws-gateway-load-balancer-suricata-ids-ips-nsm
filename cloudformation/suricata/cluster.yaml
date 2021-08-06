@@ -129,6 +129,7 @@ Resources:
           
   SuricataPcapBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
       BucketName: !Sub 
         - suricata-pcapfiles-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
