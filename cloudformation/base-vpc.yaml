@@ -178,7 +178,7 @@ Resources:
                   os.mkdir(path)
                   os.chdir(path)
                   logger.info('Clone the repository: %s to: %s' % (repo, path))
-                  os.system('git clone ' + repo + ' cloned-repo' + ' -branch' branch')
+                  os.system('git clone ' + repo + ' --branch ' + branch + ' cloned-repo ' )
                   shutil.rmtree('cloned-repo/.git')
                   logger.info('Clone complete. Files in working directory:')
                   logger.info(os.listdir(os.getcwd()))
@@ -847,7 +847,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref TGWSubnet3Cidr
-      AvailabilityZone: !Select [3, Fn::GetAZs: !Ref 'AWS::Region']
+      AvailabilityZone: !Select [2, Fn::GetAZs: !Ref 'AWS::Region']
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: false
 
