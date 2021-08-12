@@ -72,12 +72,15 @@ Resources:
 
   SuricataEcrRepo:
     Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
 
   RulesFetcherEcrRepo:
     Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
 
   SuricataBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties: 
       BucketName: !Sub 
         - suricata-codepipeline-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
