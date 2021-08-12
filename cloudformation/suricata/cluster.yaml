@@ -202,17 +202,13 @@ Resources:
       - "SuricataAutoScalingGroup"
       - "SuricataCapacityProviderAssociation" 
     Properties: 
-      CapacityProviderStrategy: 
-        - CapacityProvider: !Ref SuricataCapacityProvider
-          Base: 2
-          Weight: 1
       Cluster: !Ref SuricataEcsCluster
       DeploymentConfiguration: 
         MaximumPercent: 100
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 2
+      DesiredCount: 3
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
