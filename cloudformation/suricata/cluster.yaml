@@ -397,7 +397,7 @@ Resources:
                   - s3:GetObject
                 Resource: 
                   - !Sub arn:aws:s3:::${DynamicRulesS3Path}
-                  - !Sub arn:aws:s3:::${LuaScriptFilePath}
+                  - !Sub arn:aws:s3:::${LuaScriptFilePath}/*
               - Effect: Allow
                 Action:
                   - ssm:GetParameters

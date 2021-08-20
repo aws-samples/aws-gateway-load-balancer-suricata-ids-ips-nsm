@@ -523,7 +523,7 @@ outputs:
   # https://suricata.readthedocs.io/en/latest/output/lua-output.html
   - lua:
       enabled: yes
-      scripts-dir: /var/lib/suricata/lua/
+      scripts-dir: /var/lib/suricata/lua
       scripts:
         - script1.lua
 
