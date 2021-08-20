@@ -522,10 +522,10 @@ outputs:
   # Documented at:
   # https://suricata.readthedocs.io/en/latest/output/lua-output.html
   - lua:
-      enabled: no
-      #scripts-dir: /etc/suricata/lua-output/
+      enabled: yes
+      scripts-dir: /var/lib/suricata/lua/
       scripts:
-      #   - script1.lua
+        - script1.lua
 
 # Logging configuration.  This is not about logging IDS alerts/events, but
 # output about what Suricata is doing, like startup messages, errors, etc.

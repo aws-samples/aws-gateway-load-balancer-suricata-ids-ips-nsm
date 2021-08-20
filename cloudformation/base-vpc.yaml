@@ -552,6 +552,7 @@ Resources:
                   "PrivateSubnet2": "${PrivateSubnet2}",
                   "PrivateSubnet3": "${PrivateSubnet3}",
                   "DynamicRulesS3Path": "${SuricataBucket}/deployment/dynamic.rules",
+                  "LuaScriptFilePath": "${SuricataBucket}/deployment/Lua"
                   "SuricataImage": "#{SuricataBuild.image}",
                   "RulesFetcherImage": "#{RulesFetcherBuild.image}"
                 }

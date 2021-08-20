@@ -54,6 +54,11 @@ Parameters:
     Type: String
     Default: ""
 
+  LuaScriptFilePath:
+    Description: S3 Path to Lua Script Files
+    Type: String
+    Default: ""
+
   SuricataRulesets:
     Description: |
       Enable rulesets from the following index: https://www.openinfosecfoundation.org/rules/index.yaml in a comma delimted list. 
@@ -298,6 +303,8 @@ Resources:
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
               Value: !Ref DynamicRulesS3Path
+            - Name: LuaScriptFilePath
+              Value: !Ref LuaScriptFilePath
 
 ##
 ## Compute
@@ -388,7 +395,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: !Sub arn:aws:s3:::${DynamicRulesS3Path}
+                Resource: 
+                  - !Sub arn:aws:s3:::${DynamicRulesS3Path}
+                  - !Sub arn:aws:s3:::${LuaScriptFilePath}
               - Effect: Allow
                 Action:
                   - ssm:GetParameters

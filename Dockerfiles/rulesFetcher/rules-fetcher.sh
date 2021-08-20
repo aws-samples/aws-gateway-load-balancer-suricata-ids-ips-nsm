@@ -44,6 +44,7 @@ do
 
 
     aws s3 cp s3://$DynamicRulesS3Path /var/lib/suricata/rules/dynamic.rules --quiet
+    aws s3 cp s3://$LuaScriptFilePath /var/lib/suricata/lua --recursive --quiet
     suricata-update -f --suricata-version 6.0.2 --no-reload --no-test --url file:///dev/null --quiet
     sleep 10
 done
