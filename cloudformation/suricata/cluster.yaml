@@ -75,6 +75,10 @@ Parameters:
     Type: String
     Default: c5n.large
 
+  PipeLineBucketArn:
+    Type: String
+    Default: ""
+
 Conditions:
   HasSuricataRulesets:
     !Not [!Equals [!Ref SuricataRulesets, ""]]
@@ -395,9 +399,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
+                  - s3:ListBucket
                 Resource: 
                   - !Sub arn:aws:s3:::${DynamicRulesS3Path}
                   - !Sub arn:aws:s3:::${LuaScriptFilePath}/*
+                  - !Ref PipeLineBucketArn
               - Effect: Allow
                 Action:
                   - ssm:GetParameters

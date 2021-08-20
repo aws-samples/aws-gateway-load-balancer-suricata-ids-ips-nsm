@@ -553,7 +553,8 @@ Resources:
                   "DynamicRulesS3Path": "${SuricataBucket}/deployment/dynamic.rules",
                   "LuaScriptFilePath": "${SuricataBucket}/deployment/Lua",
                   "SuricataImage": "#{SuricataBuild.image}",
-                  "RulesFetcherImage": "#{RulesFetcherBuild.image}"
+                  "RulesFetcherImage": "#{RulesFetcherBuild.image}",
+                  "PipeLineBucketArn": !GetAtt SuricataBucket.Arn
                 }
             RunOrder: 1
           - Name: ExecuteChangeSet
