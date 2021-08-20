@@ -8,7 +8,6 @@ Parameters:
   GitBranch:
     Default: reiv-wrksp
     Type: String
-
   VpcName:
     Default: Filter VPC
     Description: Logical name for the filtration and inspection VPC
