@@ -16,6 +16,7 @@ RUN groupadd --gid 1000 suricata && \
   chmod +x /docker-entrypoint.sh /maxmind-geodb-fetcher.sh /rules-fetcher.sh
 
 VOLUME /var/lib/suricata/rules
+VOLUME /var/lib/suricata/lua
 VOLUME /usr/local/share/GeoLite2/
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
