@@ -75,7 +75,7 @@ Parameters:
     Type: String
     Default: c5n.large
 
-  PipeLineBucketArn:
+  SuricataBucket:
     Type: String
     Default: ""
 
@@ -403,7 +403,7 @@ Resources:
                 Resource: 
                   - !Sub arn:aws:s3:::${DynamicRulesS3Path}
                   - !Sub arn:aws:s3:::${LuaScriptFilePath}/*
-                  - !Ref PipeLineBucketArn
+                  - !Sub arn:aws:s3:::${SuricataBucket}
               - Effect: Allow
                 Action:
                   - ssm:GetParameters
