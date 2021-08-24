@@ -554,7 +554,7 @@ Resources:
                   "LuaScriptFilePath": "${SuricataBucket}/deployment/Lua",
                   "SuricataImage": "#{SuricataBuild.image}",
                   "RulesFetcherImage": "#{RulesFetcherBuild.image}",
-                  "SuricataBucket": ${SuricataBucket}
+                  "SuricataBucket": "${SuricataBucket}"
                 }
             RunOrder: 1
           - Name: ExecuteChangeSet
