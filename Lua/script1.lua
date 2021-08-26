@@ -7,9 +7,9 @@ end
 function match(args)
     a = tostring(args["http.request_headers"])
     if #a > 0 then
-        if a:find("labheader: BlockThisValue") then
+        if a:find("headerVal: value") then
             return 1
-        elseif a:find("labheader: AndThisValue") then
+        elseif a:find("headerVal: AndThisValue") then
             return 1
         end
     end
