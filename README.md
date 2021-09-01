@@ -8,13 +8,10 @@ This Suricata deployment can then be used as a target for Gateway Load Balancer 
 ### Quickstart
 The quickest way to deploy the full solution that consists of Suricata running on ECS and the GitOps CI/CD pipeline used for Suricata configuration is to deploy the solution using any of the `base`-clouformation templates. These templates will setup the GitOps pipeline and will copy this GitHub Repo into AWS CodeCommit which will be the Git repo you work against to setup Suricata rules, suricata configuration etc.
 
-The [base-new-vpc.yaml](/cloudformation/base-new-vpc.yaml) template will setup a new environment from scratch, including a VPC where Suricata will be deployed.
-
-The [base-existing-vpc.yaml](/cloudformation/base-existing-vpc.yaml) template (TODO) will deploy Suricata in an already existing VPC. You need to make sure your existing VPC supports the minimum requirments.
+The [base-vpc.yaml](/cloudformation/base-vpc.yaml) template will setup a new environment from scratch, including a VPC where Suricata will be deployed.
 
 For deployment documentation and walkthrough, see:
-[/docs/deployment/base-templates/base-new-vpc.md](/docs/deployment/base-templates/base-new-vpc.md)
-[/docs/deployment/base-templates/base-existing-vpc.md](/docs/deployment/base-templates/base-existing-vpc.md)
+[/docs/deployment/base-templates/base-vpc.md](/docs/deployment/base-templates/base-vpc.md)
 
 ### Other Suricata deployment configurations
 [docs/deployment](/docs/deployment) contains various deployment configurations for Suricata. 
