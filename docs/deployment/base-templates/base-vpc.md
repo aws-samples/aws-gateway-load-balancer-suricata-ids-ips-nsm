@@ -123,10 +123,8 @@ The second bucket is created as part of the pipeline release and this holds the 
 
 #### CloudWatch Logging
 
-In the default configuration, Suricata will use the following logging modules: 
-* fast
-* eve-log
-* pcap-log
+In the default configuration, Suricata will use the following logging modules: `fast`, `eve-log` and `pcap-log`.
+
 
 * `fast.log` is ingested into CloudWatch Logs: `/%stackname%/suricata/fast/` and is saved for 3 days (Configured in [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json))
 * `eve-log.json` is ingested into CloudWatch Logs: `/%stackname%/suricata/eve/` and is saved for 30 days (Configured in [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json))
