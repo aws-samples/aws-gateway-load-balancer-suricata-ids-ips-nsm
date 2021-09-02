@@ -1,10 +1,10 @@
-##### 1. Deploy the base template
+#### 1. Deploy the base template
 Deploy the base template [base-vpc.yaml in your account](/cloudformation/base-vpc.yaml)
 
 If you need help deploying the stack using Cloudformation, please see the [Official Cloudformation Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacks.html): Creating Stacks using the [AWS Console](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html) or the [CLI](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-cli-creating-stack.html)
 
 
-###### Template Parameters
+##### Template Parameters
 The base template have the following configurable stack parameters:
 | Parameter | Default Value | Description |
 |-|-|-|
@@ -20,7 +20,7 @@ The base template have the following configurable stack parameters:
 The Base template creates the GitOps Pipeline and VPC where the Suricata environment will be deployed.
 ![Solution Overview](/img/suricata-ecs-base.png)
 
-##### 2. Configure and Deploy Suricata using the GitOps Pipeline (AWS CodePipeline)
+#### 2. Configure and Deploy Suricata using the GitOps Pipeline (AWS CodePipeline)
 After the stack is created in Step 1 you go to AWS CodeCommit where you will see a repository which looks identical to this repository. Suricata has not been built nor deployed yet, so if you want you can now make changes to the Suricata config, Rulesets, Cloudformation Parameters etc. For now  we won't do any changes such as adding rules, enabling logs or similar to the Suricata Deployment.
 Let's go ahead and deploy Suricata:
 
@@ -28,7 +28,7 @@ Go to AWS CodePipeline and select "Enable Transition". The pipeline will now sta
 
 When the deployment is done, your suricata environment will look like this: ![Solution Overview](/img/suricata-ecs-cluster.png)
 
-##### 3. Use Suricata in a Centralized or Distributed architecture
+#### 3. Use Suricata in a Centralized or Distributed architecture
 You can now go ahead and setup suricata in a [centralized](/docs/architectures/centralized.md) or [distributed](/docs/architectures/distributed.md) inspection architecture.
 
 
@@ -76,38 +76,38 @@ The ECS cluster uses a host networking model for tasks that it launches and ther
 
 ### MaxMind GeoIP
 
-To make use of the MaxMind GeoIP2 database, you must first [register](https://www.maxmind.com/en/geolite2/signup?lang=en) with MaxMind. Once registered, you can populate your registration key <span style=color:Aquamarine>"MaxMindApiKey": *"%keyhere%"*</span> within the <span style=color:Aquamarine>cluster-template-configuration.json</span> file. The solution will automatically download and enable your database, ready for use with your Suricata GeoIP rules.
+To make use of the MaxMind GeoIP2 database, you must first [register](https://www.maxmind.com/en/geolite2/signup?lang=en) with MaxMind. Once registered, you can populate your registration key in the parameter `"MaxMindApiKey":` within the [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json). The solution will automatically download and enable your database, ready for use with your Suricata GeoIP rules.
 
 
 #### Amazon Elastic File System
 
-Both the Suricata and RulesFetcher containers use a [BindMount](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/bind-mounts.html) in their task definitions. The 'SuricataLogs' volume is attached to each container and mounted at '/var/log/suricata/'. Each ECS host, mounts a shared EFS volume at bootstrap and this is linked to the '/var/log/' directory. Logs are therefore saved in EFS. 
+Both the Suricata and RulesFetcher containers use a [BindMount](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/bind-mounts.html) in their task definitions. The `SuricataLogs` volume is attached to each container and mounted at `/var/log/suricata/`. Each ECS host, mounts a shared EFS volume at bootstrap and this is linked to the `/var/log/` directory. Logs are therefore saved in EFS and you don't need to worry that Logs might fill up the disk and crash your instance.
 
 #### Simple Systems Manager Parameters
 
-Various parameters are used by the solution, these are listed below:
+Various SSM parameters are used by the solution, these are listed below:
 
-1. '/*%stack-name%*/suricata/cloudwatchconfig'
+1. `/*%stack-name%*/suricata/cloudwatchconfig`
 
     >This parameter is used to hold the CloudWatch Agent configuration that is used by the ECS hosts as they boot
 
-2. '/*%stack-name%*/suricata/rulesets'
+2. `/*%stack-name%*/suricata/rulesets`
 
     >This parameter is read by the RulesFetcher container periodically. Modifications to this parameter will cause a ruleset update, ruleset download or ruleset removal to take place.
 
-3. '/*%stack-name%*/codebuild/container/rulesFetcher/md5sum'
+3. `/*%stack-name%*/codebuild/container/rulesFetcher/md5sum`
 
     >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new rulesFetcher container to save CI/CD time.
 
-4. '/*%stack-name%*/codebuild/container/rulesFetcher/uri'
+4. `/*%stack-name%*/codebuild/container/rulesFetcher/uri`
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the RulesFetcher container
 
-5. '/*%stack-name%*/codebuild/container/suricata/md5sum'
+5. `/*%stack-name%*/codebuild/container/suricata/md5sum`
 
     >This parameter is used by CodeBuild to determine whether the computed Dockerfile MD5 checksum differs from the Dockerfile in the code repository. If no changes are detected, CodeBuild won't build a new Suricata container to save CI/CD time.
 
-6. '/*%stack-name%*/codebuild/container/suricata/uri'
+6. `/*%stack-name%*/codebuild/container/suricata/uri`
 
     >This parameter is used by CodeBuild to locate the ECR repository and image for the Suricata container
 #### Amazon S3
@@ -128,13 +128,11 @@ In the default configuration, Suricata will use the following logging modules:
 * eve-log
 * pcap-log
 
-The logs that are generated by the fast and eve-log modules are loaded into CloudWatch logs and then tailed and rotated automatically on each host. Pcap logs are saved into S3. Cloudwatch Log Groups are created in anticipation of additional logging modules being enabled. You can disable these default log modules or enable other log modules by editing the ‘suricata.yaml’ configuration file. Enabled log files will automatically be loaded into CloudWatchLogs using the agent in the containers, into their respective Cloudwatch Log Groups.
+* `fast.log` is ingested into CloudWatch Logs: `/%stackname%/suricata/fast/` and is saved for 3 days (Configured in [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json))
+* `eve-log.json` is ingested into CloudWatch Logs: `/%stackname%/suricata/eve/` and is saved for 30 days (Configured in [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json))
+* `pcap` is ingested into an S3 bucket created by the Suricata Cluster Configuration stack and is saved for 5 days (Configured in [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json))
 
-* fast.log is ingested into CloudWatch Logs: /%stackname%/suricata/fast/ and is saved for 3 days (Configured in /deployment/suricata/cluster-template-configuration.json)
-* eve-log.json is ingested into CloudWatch Logs: /%stackname%/suricata/eve/ and is saved for 30 days (Configured in /deployment/suricata/cluster-template-configuration.json)
-* pcap is ingested into an S3 bucket created by the Suricata Cluster Configuration stack and is saved for 5 days (Configured in /deployment/suricata/cluster-template-configuration.json)
-
-
+The logs that are generated by the fast and eve-log modules are loaded into CloudWatch logs and then tailed and rotated automatically on each host. Pcap logs are saved into S3. Cloudwatch Log Groups are created in anticipation of additional logging modules being enabled. You can disable these default log modules or enable other log modules by editing the [suricata.yaml](/Dockerfiles/suricata/etc/suricata/suricata.yaml) configuration file. Enabled log modules will automatically be loaded into their respective Cloudwatch Log Groups using the CloudWatch agent on the EC2 host.
 ## How to cleanup
 
 ### Pipeline Deployed Artifact

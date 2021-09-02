@@ -24,9 +24,11 @@ After you have deployed Suricata you would need to create and setup Gateway Load
 
 **How can I add my own rules?**
 You have three options to configure rules:
-1. Specify a ruleset from the [The Open Information Security Foundation rulesets list](https://www.openinfosecfoundation.org/rules/index.yaml) in `/cloudformation/suricata/cluster-template-configuration.json`. The rulesets epcified are updated once every minute and you can delete and add ruelsets on the fly.
+1. Specify a ruleset from the [The Open Information Security Foundation rulesets list](https://www.openinfosecfoundation.org/rules/index.yaml) in `/cloudformation/suricata/cluster-template-configuration.json`. The rulesets specified are updated once every minute and you can delete and add rulesets on the fly.
 2. Specifying your own rules in `/dynamic.rules`. Rules in `/dynamic.rules` are deployed to s3 and read on-the-fly by the suricata engine.
 3. Specifying your own rules in `/Dockerfiles/suricata/static.rules` and rebuild, upload and deploy your new docker image. The thought here is to keep your rules versionized together with the suricata config and suricata version.
+
+For more information about rules: [rule-management.md](/docs/rule-management.md)
 
 **How can I make changes to the suricata config?**
 In the current setup, you need to make changes in the `suricata.yaml` in `Dockerfiles/suricata/etc/suricata/suricata.yaml` and rebuild, upload and deploy your new docker image. The thought here is to keep your config versioned together with the your `static.rules` and Suricata version.
@@ -34,9 +36,9 @@ In the current setup, you need to make changes in the `suricata.yaml` in `Docker
 **What logs are automatically ingested to CloudWatch Logs / S3?**
 In the default suricata configuration provided in this repo, suricata will use the following logging modules: fast.log, eve-log.json and pcap. These logs are tailed and rotated automatically.
 
-* fast.log is ingested into CloudWatch Logs: /suricata/fast/ and is  saved for 3 days (Configured in /deployment/suricata/cluster-template-configuration.json)
-* eve-log.json is ingested into CloudWatch Logs: /suricata/eve/ and is saved for 30 days (Configured in /deployment/suricata/cluster-template-configuration.json)
-* pcap is ingested into a S3 bucket created by the Suricata Cluster Configuration stack and is saved for 30 days (Configured in /deployment/suricata/cluster-template-configuration.json).
+* `fast.log` is ingested into CloudWatch Logs: `/suricata/fast/` and is  saved for 3 days (Configured in /deployment/suricata/cluster-template-configuration.json)
+* `eve-log.json` is ingested into CloudWatch Logs: `/suricata/eve/` and is saved for 30 days (Configured in /deployment/suricata/cluster-template-configuration.json)
+* `pcap` is ingested into a S3 bucket created by the Suricata Cluster Configuration stack and is saved for 30 days (Configured in /deployment/suricata/cluster-template-configuration.json).
 
 You can disable these logs or enable other logs by editing the suricata config: `/Dockerfiles/suricata/etc/suricata/suricata.yml`. You don't need to configure the Cloudwatch Agent to puckup new enabled logs. The Cloudwatch Agent is configured to automatically tail and stream Suricata logs from their default location to CloudWatch Logs. 
 
