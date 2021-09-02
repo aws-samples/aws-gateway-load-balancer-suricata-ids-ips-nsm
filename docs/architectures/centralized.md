@@ -1,0 +1,5 @@
+![Architecture](https://raw.githubusercontent.com/aws-samples/aws-gateway-load-balancer-code-samples/main/aws-cloudformation/centralized_architecture/images/gwlb_centralized_architecture.jpg)
+
+To setup suricata in a centralized inspection architecture using AWS Gateway Load Balancer (GWLB) and AWS Transit Gateway (TGW) you can follow this guide: https://github.com/aws-samples/aws-gateway-load-balancer-code-samples/tree/main/aws-cloudformation/centralized_architecture. Change the `Appliance VPC Template` in the guide to your Suricata template, for example [base-vpc.yaml](/cloudformation/base-vpc.yaml). 
+
+You need to modify eg [base-vpc.yaml](/cloudformation/base-vpc.yaml) and [cluster.yaml](/cloudformation/suricata/cluster.yaml) to create TGW Subnets and modify the routing so the TGW subnets default routes points to the GWLB Endpoints in the private subnet. You also need to add routes back to the TGW so the Suricata VPC can route back traffic to your spoke VPCs.
