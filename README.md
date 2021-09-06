@@ -1,4 +1,4 @@
-# Building and open-source IPS/IDS Service on Gateway Load Balancer 
+# Building an open-source IPS/IDS Service on Gateway Load Balancer 
 <img  width="120" height="180" align="right" src=img/meerkat.png>
 This repository has deployment, installation and clean up instructions on how to deploy and manage Suricata in AWS with Elastic Container Services and Gateway Load balancer. The main use-case for this repo is to provide a baseline from which you can build on. The solution will deploy Suricata on ECS and provides an opportunity to adjust the Suricata configuration and rulesets using a GitOps workflow.
 
