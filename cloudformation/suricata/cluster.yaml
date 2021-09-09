@@ -68,9 +68,17 @@ Parameters:
     Type: String
     Default: c5n.large
 
+  SuricataClusterMinSize:
+    Description: The base number of Suricata containers in the cluster. Each container will have it's own EC2 instance.
+    Type: String
+    Default: 2
+
+
 Conditions:
   HasSuricataRulesets:
     !Not [!Equals [!Ref SuricataRulesets, ""]]
+  HasMaxMindApiKey:
+    !Not [!Equals [!Ref MaxMindApiKey, ""]]
 
 Resources:
   SuricataRulesetsParameter:
@@ -80,6 +88,14 @@ Resources:
       Name: !Sub /${AWS::StackName}/suricata/rulesets
       Type:  String
       Value: !Ref SuricataRulesets
+
+  MaxMindApiKeyParameter:
+    Condition: HasMaxMindApiKey
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/suricata/maxmindapikey
+      Type:  String
+      Value: !Ref MaxMindApiKey
 
 ##
 ## Monitoring
@@ -208,7 +224,7 @@ Resources:
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 3
+      DesiredCount: !Ref SuricataClusterMinSize
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
@@ -233,7 +249,7 @@ Resources:
         - !Ref SuricataCapacityProvider
       Cluster: !Ref SuricataEcsCluster 
       DefaultCapacityProviderStrategy: 
-        - Base: 3
+        - Base: !Ref SuricataClusterMinSize
           Weight: 1
           CapacityProvider: !Ref SuricataCapacityProvider
 
@@ -290,8 +306,8 @@ Resources:
           Environment:
             - Name: RulesetsSsmParameter
               Value: !Sub /${AWS::StackName}/suricata/rulesets
-            - Name: MaxMindApiKey
-              Value: !Ref MaxMindApiKey
+            - Name: MaxMindApiKeySsmParameter
+              Value: !Sub /${AWS::StackName}/suricata/maxmindapikey
             - Name: REGION
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
