@@ -1,6 +1,4 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Lab environment for 2021 AWS re:Invent Build an open-source IDS/IPS/NSM service for Gateway Load Balancer - bring out your inner MeerKat - Inspection appliance stack.
-
 
 Parameters:
   VpcId:
@@ -54,11 +52,6 @@ Parameters:
     Type: String
     Default: ""
 
-  LuaScriptFilePath:
-    Description: S3 Path to Lua Script Files
-    Type: String
-    Default: ""
-
   SuricataRulesets:
     Description: |
       Enable rulesets from the following index: https://www.openinfosecfoundation.org/rules/index.yaml in a comma delimted list. 
@@ -75,13 +68,17 @@ Parameters:
     Type: String
     Default: c5n.large
 
-  SuricataBucket:
+  SuricataClusterMinSize:
+    Description: The base number of Suricata containers in the cluster. Each container will have it's own EC2 instance.
     Type: String
-    Default: ""
+    Default: 2
+
 
 Conditions:
   HasSuricataRulesets:
     !Not [!Equals [!Ref SuricataRulesets, ""]]
+  HasMaxMindApiKey:
+    !Not [!Equals [!Ref MaxMindApiKey, ""]]
 
 Resources:
   SuricataRulesetsParameter:
@@ -91,6 +88,14 @@ Resources:
       Name: !Sub /${AWS::StackName}/suricata/rulesets
       Type:  String
       Value: !Ref SuricataRulesets
+
+  MaxMindApiKeyParameter:
+    Condition: HasMaxMindApiKey
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/suricata/maxmindapikey
+      Type:  String
+      Value: !Ref MaxMindApiKey
 
 ##
 ## Monitoring
@@ -212,14 +217,14 @@ Resources:
     DependsOn:
       - "SuricataAutoScalingGroup"
       - "SuricataCapacityProviderAssociation" 
-    Properties:
+    Properties: 
       Cluster: !Ref SuricataEcsCluster
       DeploymentConfiguration: 
         MaximumPercent: 100
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 3
+      DesiredCount: !Ref SuricataClusterMinSize
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
@@ -244,7 +249,7 @@ Resources:
         - !Ref SuricataCapacityProvider
       Cluster: !Ref SuricataEcsCluster 
       DefaultCapacityProviderStrategy: 
-        - Base: 3
+        - Base: !Ref SuricataClusterMinSize
           Weight: 1
           CapacityProvider: !Ref SuricataCapacityProvider
 
@@ -301,14 +306,12 @@ Resources:
           Environment:
             - Name: RulesetsSsmParameter
               Value: !Sub /${AWS::StackName}/suricata/rulesets
-            - Name: MaxMindApiKey
-              Value: !Ref MaxMindApiKey
+            - Name: MaxMindApiKeySsmParameter
+              Value: !Sub /${AWS::StackName}/suricata/maxmindapikey
             - Name: REGION
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
               Value: !Ref DynamicRulesS3Path
-            - Name: LuaScriptFilePath
-              Value: !Ref LuaScriptFilePath
 
 ##
 ## Compute
@@ -345,7 +348,7 @@ Resources:
       Type: gateway
       LoadBalancerAttributes:
         - Key: load_balancing.cross_zone.enabled
-          Value: False
+          Value: True
       Subnets:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
@@ -399,11 +402,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:ListBucket
-                Resource: 
-                  - !Sub arn:aws:s3:::${DynamicRulesS3Path}
-                  - !Sub arn:aws:s3:::${LuaScriptFilePath}/*
-                  - !Sub arn:aws:s3:::${SuricataBucket}
+                Resource: !Sub arn:aws:s3:::${DynamicRulesS3Path}
               - Effect: Allow
                 Action:
                   - ssm:GetParameters
@@ -609,7 +608,7 @@ Resources:
     Properties:
       DesiredCapacity: "0"
       HealthCheckGracePeriod: 600
-      HealthCheckType: ELB
+      #HealthCheckType: ELB
       LaunchConfigurationName: !Ref SuricataLaunchConfiguration
       MaxSize: "10"
       MinSize: "0"
