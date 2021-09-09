@@ -71,6 +71,8 @@ Parameters:
 Conditions:
   HasSuricataRulesets:
     !Not [!Equals [!Ref SuricataRulesets, ""]]
+  HasMaxMindApiKey:
+    !Not [!Equals [!Ref MaxMindApiKey, ""]]
 
 Resources:
   SuricataRulesetsParameter:
@@ -80,6 +82,14 @@ Resources:
       Name: !Sub /${AWS::StackName}/suricata/rulesets
       Type:  String
       Value: !Ref SuricataRulesets
+
+  MaxMindApiKeyParameter:
+    Condition: HasMaxMindApiKey
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AWS::StackName}/suricata/maxmindapikey
+      Type:  String
+      Value: !Ref MaxMindApiKey
 
 ##
 ## Monitoring
@@ -127,12 +137,8 @@ Resources:
           
   SuricataPcapBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
     Properties:
-      BucketName: !Sub 
-        - suricata-pcapfiles-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
-        - RandomizedValue:
-            Fn::Select: [0, Fn::Split: [-, Fn::Select: [2, Fn::Split: [/, !Ref AWS::StackId ]]]] # Takes the first part of the random GUID in the cloudformation stacks arn.
+      BucketName: !Sub ${AWS::StackName}-pcapbucket
       LifecycleConfiguration:
         Rules:
           - Status: Enabled
@@ -202,13 +208,17 @@ Resources:
       - "SuricataAutoScalingGroup"
       - "SuricataCapacityProviderAssociation" 
     Properties: 
+      CapacityProviderStrategy: 
+        - CapacityProvider: !Ref SuricataCapacityProvider
+          Base: 2
+          Weight: 1
       Cluster: !Ref SuricataEcsCluster
       DeploymentConfiguration: 
         MaximumPercent: 100
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 3
+      DesiredCount: 2
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
@@ -290,8 +300,8 @@ Resources:
           Environment:
             - Name: RulesetsSsmParameter
               Value: !Sub /${AWS::StackName}/suricata/rulesets
-            - Name: MaxMindApiKey
-              Value: !Ref MaxMindApiKey
+            - Name: MaxMindApiKeySsmParameter
+              Value: !Sub /${AWS::StackName}/suricata/maxmindapikey
             - Name: REGION
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
