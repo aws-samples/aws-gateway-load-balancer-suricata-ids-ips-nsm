@@ -137,8 +137,12 @@ Resources:
           
   SuricataPcapBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
-      BucketName: !Sub ${AWS::StackName}-pcapbucket
+      BucketName: !Sub 
+        - suricata-pcapfiles-${AWS::Region}-${AWS::AccountId}-${RandomizedValue}
+        - RandomizedValue:
+            Fn::Select: [0, Fn::Split: [-, Fn::Select: [2, Fn::Split: [/, !Ref AWS::StackId ]]]] # Takes the first part of the random GUID in the cloudformation stacks arn.
       LifecycleConfiguration:
         Rules:
           - Status: Enabled
