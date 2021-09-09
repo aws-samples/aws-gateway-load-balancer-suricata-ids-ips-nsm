@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Description: Lab environment for 2021 AWS re:Invent Build an open-source IDS/IPS/NSM service for Gateway Load Balancer - bring out your inner MeerKat - Inspection appliance stack.
 
 Parameters:
   VpcId:
@@ -49,6 +50,11 @@ Parameters:
 
   DynamicRulesS3Path:
     Description: S3 Path to dynamic.rules
+    Type: String
+    Default: ""
+
+  LuaScriptFilePath:
+    Description: S3 Path to Lua Script Files
     Type: String
     Default: ""
 
@@ -348,7 +354,7 @@ Resources:
       Type: gateway
       LoadBalancerAttributes:
         - Key: load_balancing.cross_zone.enabled
-          Value: True
+          Value: false
       Subnets:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
@@ -402,7 +408,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: !Sub arn:aws:s3:::${DynamicRulesS3Path}
+                  - s3:ListBucket
+                Resource: 
+                  - !Sub arn:aws:s3:::${DynamicRulesS3Path}
+                  - !Sub arn:aws:s3:::${LuaScriptFilePath}/*
+                  - !Sub arn:aws:s3:::${SuricataBucket}
               - Effect: Allow
                 Action:
                   - ssm:GetParameters
@@ -608,7 +618,7 @@ Resources:
     Properties:
       DesiredCapacity: "0"
       HealthCheckGracePeriod: 600
-      #HealthCheckType: ELB
+      HealthCheckType: ELB
       LaunchConfigurationName: !Ref SuricataLaunchConfiguration
       MaxSize: "10"
       MinSize: "0"
