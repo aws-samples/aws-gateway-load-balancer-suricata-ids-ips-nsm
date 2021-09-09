@@ -79,6 +79,10 @@ Parameters:
     Type: String
     Default: 2
 
+  SuricataBucket:
+    Type: String
+    Default: ""
+
 
 Conditions:
   HasSuricataRulesets:
@@ -318,6 +322,8 @@ Resources:
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
               Value: !Ref DynamicRulesS3Path
+            - Name: LuaScriptFilePath
+              Value: !Ref LuaScriptFilePath
 
 ##
 ## Compute
