@@ -11,8 +11,8 @@ COPY docker-entrypoint.sh maxmind-geodb-fetcher.sh rules-fetcher.sh supervisord.
 
 RUN groupadd --gid 1000 suricata && \
   useradd --gid 1000 --uid 1000 --create-home suricata && \
-  mkdir -p /var/lib/suricata/rules /tmp/maxmind/ && \
-  chown -R suricata:suricata /var/lib/suricata && \
+  mkdir -p /var/lib/suricata/rules /tmp/maxmind/ /usr/local/share/GeoLite2/ && \
+  chown -R suricata:suricata /var/lib/suricata /tmp/maxmind/ /usr/local/share/GeoLite2/ && \
   chmod +x /docker-entrypoint.sh /maxmind-geodb-fetcher.sh /rules-fetcher.sh
 
 VOLUME /var/lib/suricata/rules
