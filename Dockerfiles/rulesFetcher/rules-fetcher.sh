@@ -24,7 +24,7 @@ do
         for I in /var/lib/suricata/update/sources/*; do
             source=$(grep "source:" "$I" | sed -e 's/source: //')
             if [[ ! "$rule_sources_to_be_used" = *$source* ]]; then
-                echo "[INFO] Removing rule source: $I since the source wasn't found in CloudFormation Parameter: SuricataRulesets."
+                echo "[INFO] Removing rule source: $source since the source wasn't found in CloudFormation Parameter: SuricataRulesets."
                 suricata-update remove-source --suricata-version 6.0.2 --quiet "$source"
             fi
         done
