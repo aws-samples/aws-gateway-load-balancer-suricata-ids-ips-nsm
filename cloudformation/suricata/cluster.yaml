@@ -68,6 +68,12 @@ Parameters:
     Type: String
     Default: c5n.large
 
+  SuricataClusterMinSize:
+    Description: The base number of Suricata containers in the cluster. Each container will have it's own EC2 instance.
+    Type: String
+    Default: 2
+
+
 Conditions:
   HasSuricataRulesets:
     !Not [!Equals [!Ref SuricataRulesets, ""]]
@@ -212,17 +218,13 @@ Resources:
       - "SuricataAutoScalingGroup"
       - "SuricataCapacityProviderAssociation" 
     Properties: 
-      CapacityProviderStrategy: 
-        - CapacityProvider: !Ref SuricataCapacityProvider
-          Base: 2
-          Weight: 1
       Cluster: !Ref SuricataEcsCluster
       DeploymentConfiguration: 
         MaximumPercent: 100
         MinimumHealthyPercent: 50
       DeploymentController: 
         Type: ECS
-      DesiredCount: 2
+      DesiredCount: !Ref SuricataClusterMinSize
       EnableECSManagedTags: true
       PlacementConstraints: 
         - Type: distinctInstance 
@@ -247,7 +249,7 @@ Resources:
         - !Ref SuricataCapacityProvider
       Cluster: !Ref SuricataEcsCluster 
       DefaultCapacityProviderStrategy: 
-        - Base: 3
+        - Base: !Ref SuricataClusterMinSize
           Weight: 1
           CapacityProvider: !Ref SuricataCapacityProvider
 
