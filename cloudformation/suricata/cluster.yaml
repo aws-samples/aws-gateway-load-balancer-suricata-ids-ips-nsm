@@ -360,7 +360,7 @@ Resources:
       Type: gateway
       LoadBalancerAttributes:
         - Key: load_balancing.cross_zone.enabled
-          Value: false
+          Value: False
       Subnets:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
