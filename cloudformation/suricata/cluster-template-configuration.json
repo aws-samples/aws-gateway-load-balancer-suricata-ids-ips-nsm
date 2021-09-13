@@ -5,7 +5,8 @@
 		"EveLogRententionCloudWatch": "30",
 		"SuricataRulesets": "",
 		"MaxMindApiKey": "",
-		"SuricataInstanceType": "t3.large"
+		"SuricataInstanceType": "t3.large",
+		"SuricataClusterMinSize": "2"
     },
 	"Tags" : {
 		"auto-delete" : "never",

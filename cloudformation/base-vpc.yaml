@@ -405,9 +405,6 @@ Resources:
           - Name: CONTAINERURI_SSM_PARAMETER
             Type: PLAINTEXT
             Value: !Sub /${AWS::StackName}/codebuild/container/suricata/uri
-          - Name: MAXMIND_API_KEY_PARAMETER
-            Type: PLAINTEXT
-            Value: !Sub /${AWS::StackName}/codebuild/container/suricata/maxmindapikey
           - Name: AWS_ACCOUNT_ID
             Type: PLAINTEXT
             Value: !Ref AWS::AccountId
