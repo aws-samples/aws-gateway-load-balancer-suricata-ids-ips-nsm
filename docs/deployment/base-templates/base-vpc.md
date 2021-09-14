@@ -74,11 +74,11 @@ The configuration file allows convenient modification of logging and instance si
 
 The ECS cluster uses a host networking model for tasks that it launches and therefore creates a 1:1 mapping between a running task and a running ECS host. The ECS hosts are launched by an Autoscaling Group and have their low-level networking parameters configured to support GWLB integration – they are added to the cluster as part of the bootstrap process. The ECS Service creates 3 Tasks, and each task launches a Suricata container and a Rulesfetcher container on each host. The hosts pass networking traffic to the Suricata container using a Queue configuration. The RulesFetcher container is responsible for pulling rule files updates from S3 that are placed there by the pipeline and from external sources via direct internet connection. External rules are checked every 60 seconds by the RulesFetcher container, rule file updates that are placed in S3 are checked and aupdated approximately every 10-20 seconds.
 
-### MaxMind GeoIP
+##### MaxMind GeoIP
 
 To make use of the MaxMind GeoIP2 database, you must first [register](https://www.maxmind.com/en/geolite2/signup?lang=en) with MaxMind. Once registered, you can populate your registration key in the parameter `"MaxMindApiKey":` within the [Cloudformation parameter file](/cloudformation/suricata/cluster-template-configuration.json). The solution will automatically download and enable your database, ready for use with your Suricata GeoIP rules.
 
-### Lua Scripting
+##### Lua Scripting
 
 The docker image for Suricata has been compiled with the Lua scripting module. This enables advanced packet reporting and handling through either the output function or as a filter condition in a signature. Lua scripts can be created and added to the default rules dir and referenced with suricata rules.
 
