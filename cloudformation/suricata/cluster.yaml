@@ -5,7 +5,7 @@ Parameters:
     Description: The VPC id
     Type: String
   VpcCidr:
-    Description: The VPC id
+    Description: The VPC CIDR block
     Type: String
   PrivateSubnet1:
     Description: The Private Subnet 1 id
@@ -72,6 +72,16 @@ Parameters:
     Description: The base number of Suricata containers in the cluster. Each container will have it's own EC2 instance.
     Type: String
     Default: 2
+
+  SuricataClusterMaxSize:
+    Description: The maximum number of Suricata containers in the cluster. Each container will have it's own EC2 instance.
+    Type: String
+    Default: 10
+
+  SuricataCpuScalingPercentage:
+    Description: ECS will scale up a new Suricata container when the service reaches this average CPU utilization.
+    Type: String
+    Default: 80.0
 
 
 Conditions:
@@ -267,7 +277,7 @@ Resources:
       ContainerDefinitions: 
         - Name: Suricata
           Image: !Ref SuricataImage
-          MemoryReservation: 256
+          MemoryReservation: 2048
           Essential: true
           DependsOn:
             - ContainerName: RulesFetcher
@@ -294,7 +304,7 @@ Resources:
             -  ContainerPort: 80
         - Name: RulesFetcher
           Image: !Ref RulesFetcherImage
-          MemoryReservation: 32
+          MemoryReservation: 128
           Essential: true
           LogConfiguration:
             LogDriver: awslogs
@@ -312,6 +322,54 @@ Resources:
               Value: !Ref AWS::Region
             - Name: DynamicRulesS3Path
               Value: !Ref DynamicRulesS3Path
+
+  SuricataScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      RoleARN: !GetAtt SuricataEcsAutoScalingRole.Arn
+      ResourceId: !Sub  service/${SuricataEcsCluster}/${SuricataService.Name}
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
+      MinCapacity: !Ref SuricataClusterMinSize
+      MaxCapacity: !Ref SuricataClusterMaxSize
+
+  AvgCpuScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: cpu-suricata-tracking-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref SuricataScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        DisableScaleIn: false
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: !Ref SuricataCpuScalingPercentage
+
+  SuricataEcsAutoScalingRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: [application-autoscaling.amazonaws.com]
+              Action: ["sts:AssumeRole"]
+        Policies:
+          - PolicyName: SuricataEcsAutoScalingPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - ecs:DescribeServices
+                    - ecs:UpdateService
+                    - cloudwatch:PutMetricAlarm
+                    - cloudwatch:DescribeAlarms
+                    - cloudwatch:DeleteAlarms
+                  Resource:
+                    - "*"
 
 ##
 ## Compute
@@ -606,12 +664,11 @@ Resources:
   SuricataAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      DesiredCapacity: "0"
       HealthCheckGracePeriod: 600
-      #HealthCheckType: ELB
+      HealthCheckType: ELB
       LaunchConfigurationName: !Ref SuricataLaunchConfiguration
-      MaxSize: "10"
-      MinSize: "0"
+      MaxSize: !Ref SuricataClusterMaxSize 
+      MinSize: "0" #Controlled by ECS Capacity Provider
       NewInstancesProtectedFromScaleIn: false
       VPCZoneIdentifier:
       - !Ref PrivateSubnet1
