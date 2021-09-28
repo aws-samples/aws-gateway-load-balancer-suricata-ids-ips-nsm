@@ -47,10 +47,11 @@ You can disable these logs or enable other logs by editing the suricata config: 
 
 The stdout from the Suricata and RuleFetcher container is also logging to CloudWatch Logs per default. 
 
-**Do Suricata scale automatically?**
+**Does Suricata scale automatically?**
 
 ECS Autoscaling is enabled for CPU. When the clusters average CPU goes over 80% (configurable) a new ECS task (a suricata container) is started. Scale-in is enabled, so if your traffic pattern is changing alot you will see ECS tasks (suricata containers) come and go.
-Gateway Load Balancer will add the new ECS tasks as targts, however existing flows will still go to their old targets so we recommend that you tweak the scaling paramters, configurationand metrics to fit your environment. For example, if you have lots of long-lasting flows, you might want to disable automatic scale-in.
+Gateway Load Balancer will add the new ECS tasks as targets, however existing flows will still go to their old targets so we recommend that you tweak the scaling parameters, configuration and metrics to fit your environment. For example, if you have lots of long-lasting flows, you might want to disable automatic scale-in.
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
