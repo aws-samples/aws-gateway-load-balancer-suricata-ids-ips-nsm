@@ -535,7 +535,7 @@ Resources:
           
           cat > /opt/logrotate.sh << 'EOF'
           /usr/sbin/logrotate -s /var/lib/logrotate/logrotate.status /etc/logrotate.d/suricata
-          for I in $(ls -t /var/log/suricata/log.pcap.* | tail -n +2); do /usr/bin/aws s3 mv $I s3://${SuricataPcapBucket}/$(date -d @${!I##*.} +'%Y/%m/%d/%H:%M:%S'.pcap)  --content-type "application/vnd.tcpdump.pcap" --metadata InstanceId=$instance_id; done
+          for I in $(ls -t /var/log/suricata/log.pcap.* | tail -n +2); do /usr/bin/aws s3 mv $I s3://${SuricataPcapBucket}/$(date -d @${!I##*.} +'%Y/%m/%d/%H-%M-%S'.pcap)  --content-type "application/vnd.tcpdump.pcap" --metadata InstanceId=$(curl -s http://169.254.169.254/latest/meta-data/instance-id); done
           EOF
 
           chmod +x /opt/logrotate.sh
