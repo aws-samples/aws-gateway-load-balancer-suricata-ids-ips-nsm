@@ -46,6 +46,12 @@ In the default suricata configuration provided in this repo, suricata will use t
 You can disable these logs or enable other logs by editing the suricata config: `/Dockerfiles/suricata/etc/suricata/suricata.yml`. You don't need to configure the Cloudwatch Agent to puckup new enabled logs. The Cloudwatch Agent is configured to automatically tail and stream Suricata logs from their default location to CloudWatch Logs. 
 
 The stdout from the Suricata and RuleFetcher container is also logging to CloudWatch Logs per default. 
+
+**Does Suricata scale automatically?**
+
+ECS Autoscaling is enabled for CPU. When the clusters average CPU goes over 80% (configurable) a new ECS task (a suricata container) is started. Scale-in is enabled, so if your traffic pattern is changing alot you will see ECS tasks (suricata containers) come and go.
+Gateway Load Balancer will add the new ECS tasks as targets, however existing flows will still go to their old targets so we recommend that you tweak the scaling parameters, configuration and metrics to fit your environment. For example, if you have lots of long-lasting flows, you might want to disable automatic scale-in.
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.

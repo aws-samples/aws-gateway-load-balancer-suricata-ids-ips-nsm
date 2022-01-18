@@ -6,6 +6,8 @@
 		"SuricataRulesets": "",
 		"MaxMindApiKey": "",
 		"SuricataInstanceType": "t3.large",
-		"SuricataClusterMinSize": "2"
+		"SuricataClusterMaxSize": "10",
+		"SuricataClusterMinSize": "2",
+		"SuricataCpuScalingPercentage": "80"
     }
 }
