@@ -3,7 +3,7 @@ Description: Pipeline Automation Template
 
 Parameters:
   GitRepo:
-    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
+    Default: https://github.com/adhikary97/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
     Type: String
 
   VpcName:
@@ -96,6 +96,7 @@ Resources:
   GitRepoToCodeCommitLambdaRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -185,6 +186,7 @@ Resources:
   CPipelineCloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -207,6 +209,7 @@ Resources:
   CPipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -263,6 +266,7 @@ Resources:
   CPipelineCodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -528,6 +532,7 @@ Resources:
   CPipelineCloudWatchEventRole:
       Type: AWS::IAM::Role
       Properties:
+        PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
         AssumeRolePolicyDocument:
           Version: 2012-10-17
           Statement:
