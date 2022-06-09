@@ -350,6 +350,7 @@ Resources:
   SuricataEcsAutoScalingRole:
       Type: AWS::IAM::Role
       Properties:
+        PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -442,6 +443,7 @@ Resources:
   SuricataEcsInstanceRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
         - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -694,6 +696,7 @@ Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary : arn:aws:iam::633467406968:policy/PCSKPermissionsBoundary
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

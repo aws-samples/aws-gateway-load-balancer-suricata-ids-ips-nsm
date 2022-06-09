@@ -3,7 +3,7 @@ Description: Pipeline Automation Template
 
 Parameters:
   GitRepo:
-    Default: https://github.com/adhikary97/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
+    Default: https://github.com/aws-samples/aws-gateway-load-balancer-suricata-ids-ips-nsm.git
     Type: String
 
   VpcName:
