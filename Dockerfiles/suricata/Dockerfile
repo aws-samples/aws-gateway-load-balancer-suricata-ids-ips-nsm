@@ -13,7 +13,7 @@ ENV PATH=/root/.cargo/bin:$PATH
 RUN git clone --recursive https://github.com/maxmind/libmaxminddb && cd /tmp/libmaxminddb && \ 
   ./bootstrap && ./configure && make && make install && ldconfig && cp /usr/local/lib/libmaxminddb.so.0 /usr/lib64/ && \
   cd ../ && curl -ks https://www.openinfosecfoundation.org/download/suricata-6.0.0.tar.gz -o suricata-6.0.0.tar.gz && \
-  tar -zxvf suricata-6.0.0.tar.gz && \ cd suricata-6.0.0 && \
+  tar -zxvf suricata-6.0.0.tar.gz && cd suricata-6.0.0 && \
   ./configure --disable-gccmarch-native --prefix=/ --sysconfdir=/etc/ --localstatedir=/var/ --enable-lua --enable-geoip --enable-nfqueue --enable-rust && \
   make install install-conf && \
   mkdir -p /var/lib/suricata/update/ && \
